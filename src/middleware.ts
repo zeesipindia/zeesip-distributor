@@ -4,7 +4,7 @@ import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/jwt';
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // 1. Allow public static assets and auth API endpoints
+  // 1. Allow public static assets and public auth API endpoints
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon.ico') ||
@@ -32,15 +32,18 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // 4. API routes protection
+  // 4. Admin API routes: Return 401 if unauthenticated, 403 if logged in but lacks admin role
   if (pathname.startsWith('/api/admin')) {
-    if (!session || !isAdminRole) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized: Authentication required' }, { status: 401 });
+    }
+    if (!isAdminRole) {
+      return NextResponse.json({ error: 'Forbidden: Admin privileges required' }, { status: 403 });
     }
     return NextResponse.next();
   }
 
-  // 5. Admin routes (/admin/*)
+  // 5. Admin UI routes (/admin/*)
   if (pathname.startsWith('/admin')) {
     if (!session) {
       const loginUrl = new URL('/', request.url);

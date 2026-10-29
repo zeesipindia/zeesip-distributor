@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { constantTimeCompare, signSessionToken, computePasswordLookup, SESSION_COOKIE_OPTIONS } from '@/lib/auth';
-import { checkRateLimit, recordFailedAttempt, resetRateLimit } from '@/lib/rate-limit';
+import { checkRateLimit, recordFailedAttempt, resetRateLimit, getClientIp } from '@/lib/rate-limit';
 import { findUserByPasswordLookup } from '@/lib/db';
 
 export async function POST(request: NextRequest) {
   try {
-    const forwarded = request.headers.get('x-forwarded-for');
-    const ip = forwarded ? forwarded.split(',')[0].trim() : (request.headers.get('x-real-ip') || '127.0.0.1');
+    const ip = getClientIp(request);
 
-    // 1. Check IP rate limit (5 failed attempts -> 15 min lockout)
-    const limitStatus = checkRateLimit(ip);
+    // 1. Check persistent IP rate limit (5 failed attempts -> 15 min lockout)
+    const limitStatus = await checkRateLimit(ip);
     if (!limitStatus.allowed) {
       return NextResponse.json(
         { error: 'Too many attempts. Try again later.' },
@@ -30,7 +29,7 @@ export async function POST(request: NextRequest) {
 
     // 2. Check against master ADMIN_PASSWORD
     if (expectedAdminPassword && constantTimeCompare(trimmedPassword, expectedAdminPassword)) {
-      resetRateLimit(ip);
+      await resetRateLimit(ip);
 
       const token = await signSessionToken({
         userId: 'admin-master',
@@ -63,7 +62,7 @@ export async function POST(request: NextRequest) {
     if (user) {
       const isPasswordValid = await bcrypt.compare(trimmedPassword, user.password_hash);
       if (isPasswordValid && user.is_active) {
-        resetRateLimit(ip);
+        await resetRateLimit(ip);
 
         const token = await signSessionToken({
           userId: user.id,
@@ -92,8 +91,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 4. Failed password attempt: record rate limit
-    const record = recordFailedAttempt(ip);
+    // 4. Failed password attempt: record in persistent rate limiter
+    const record = await recordFailedAttempt(ip);
     if (record.isLocked) {
       return NextResponse.json(
         { error: 'Too many attempts. Try again later.' },

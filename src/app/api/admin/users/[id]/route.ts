@@ -6,24 +6,31 @@ import { SessionPayload } from '@/lib/types';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-async function getAdminSession(request: NextRequest): Promise<SessionPayload | null> {
+async function checkAdminSession(request: NextRequest): Promise<{ session: SessionPayload } | { error: string; status: number }> {
   const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
-  if (!token) return null;
-  const session = await verifySessionToken(token);
-  if (!session || (session.role !== 'admin' && session.role !== 'zeesip_admin')) {
-    return null;
+  if (!token) {
+    return { error: 'Unauthorized: Authentication required', status: 401 };
   }
-  return session;
+  const session = await verifySessionToken(token);
+  if (!session) {
+    return { error: 'Unauthorized: Invalid session', status: 401 };
+  }
+  if (session.role !== 'admin' && session.role !== 'zeesip_admin') {
+    return { error: 'Forbidden: Admin privileges required', status: 403 };
+  }
+  return { session };
 }
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const adminSession = await getAdminSession(request);
-  if (!adminSession) {
-    return NextResponse.json({ error: 'Unauthorized: Admin access required' }, { status: 401 });
+  const authCheck = await checkAdminSession(request);
+  if ('error' in authCheck) {
+    return NextResponse.json({ error: authCheck.error }, { status: authCheck.status });
   }
+
+  const adminSession = authCheck.session;
 
   try {
     const { id } = await params;
@@ -115,10 +122,12 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const adminSession = await getAdminSession(request);
-  if (!adminSession) {
-    return NextResponse.json({ error: 'Unauthorized: Admin access required' }, { status: 401 });
+  const authCheck = await checkAdminSession(request);
+  if ('error' in authCheck) {
+    return NextResponse.json({ error: authCheck.error }, { status: authCheck.status });
   }
+
+  const adminSession = authCheck.session;
 
   try {
     const { id } = await params;

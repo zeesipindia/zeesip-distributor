@@ -3,16 +3,25 @@ import bcrypt from 'bcryptjs';
 import { listUsers, createUser, findUserByPasswordLookup } from '@/lib/db';
 import { verifySessionToken, computePasswordLookup, constantTimeCompare, SESSION_COOKIE_NAME } from '@/lib/auth';
 
-async function verifyAdminAuth(request: NextRequest): Promise<boolean> {
+async function checkAdminAuth(request: NextRequest): Promise<{ ok: true } | { error: string; status: number }> {
   const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
-  if (!token) return false;
+  if (!token) {
+    return { error: 'Unauthorized: Authentication required', status: 401 };
+  }
   const session = await verifySessionToken(token);
-  return session?.role === 'admin' || session?.role === 'zeesip_admin';
+  if (!session) {
+    return { error: 'Unauthorized: Invalid session', status: 401 };
+  }
+  if (session.role !== 'admin' && session.role !== 'zeesip_admin') {
+    return { error: 'Forbidden: Admin privileges required', status: 403 };
+  }
+  return { ok: true };
 }
 
 export async function GET(request: NextRequest) {
-  if (!(await verifyAdminAuth(request))) {
-    return NextResponse.json({ error: 'Unauthorized: Admin access required' }, { status: 401 });
+  const authCheck = await checkAdminAuth(request);
+  if ('error' in authCheck) {
+    return NextResponse.json({ error: authCheck.error }, { status: authCheck.status });
   }
 
   try {
@@ -20,7 +29,6 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') ? searchParams.get('search')?.slice(0, 100) : undefined;
     const role = searchParams.get('role') || undefined;
 
-    // Strict role validation
     const validRoles = ['distributor', 'zeesip_staff', 'zeesip_admin'];
     const filteredRole = role && validRoles.includes(role) ? role : undefined;
 
@@ -33,15 +41,15 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await verifyAdminAuth(request))) {
-    return NextResponse.json({ error: 'Unauthorized: Admin access required' }, { status: 401 });
+  const authCheck = await checkAdminAuth(request);
+  if ('error' in authCheck) {
+    return NextResponse.json({ error: authCheck.error }, { status: authCheck.status });
   }
 
   try {
     const body = await request.json();
     const { name, role, password } = body;
 
-    // Validate inputs
     const cleanName = String(name || '').trim();
     if (!cleanName || cleanName.length > 100) {
       return NextResponse.json({ error: 'Full name is required (max 100 characters)' }, { status: 400 });
@@ -82,7 +90,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Hash password with bcrypt (10 salt rounds)
+    // Hash password with bcrypt
     const salt = await bcrypt.genSalt(10);
     const password_hash = await bcrypt.hash(trimmedPassword, salt);
 

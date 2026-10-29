@@ -5,12 +5,17 @@ import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';
 export async function GET(request: NextRequest) {
   const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
   if (!token) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized: Authentication required' }, { status: 401 });
   }
 
   const session = await verifySessionToken(token);
-  if (!session || (session.role !== 'admin' && session.role !== 'zeesip_admin')) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized: Invalid session' }, { status: 401 });
+  }
+
+  // Logged-in user lacks admin role -> return 403 Forbidden
+  if (session.role !== 'admin' && session.role !== 'zeesip_admin') {
+    return NextResponse.json({ error: 'Forbidden: Admin privileges required' }, { status: 403 });
   }
 
   try {
