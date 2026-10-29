@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { suggestUsername, generateStrongPassword } from '@/lib/utils';
-import { KeyRound, RefreshCw, Copy, Check, AlertTriangle, UserCheck, Loader2 } from 'lucide-react';
+import { Copy, Check, Loader2 } from 'lucide-react';
 import { PortalUserPublic } from '@/lib/types';
 
 interface AddUserModalProps {
@@ -51,7 +51,7 @@ export function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps
     setError(null);
 
     if (!name.trim()) {
-      setError('Please provide a full name');
+      setError('Please provide a name');
       return;
     }
     if (!username.trim()) {
@@ -59,7 +59,7 @@ export function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps
       return;
     }
     if (!password) {
-      setError('Please set or generate a password');
+      setError('Please enter or generate a password');
       return;
     }
 
@@ -97,7 +97,6 @@ export function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps
   };
 
   const handleClose = () => {
-    // Reset all form state
     setName('');
     setRole('distributor');
     setUsername('');
@@ -113,7 +112,7 @@ export function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps
     if (createdResult?.plainPassword) {
       navigator.clipboard.writeText(createdResult.plainPassword);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
+      setTimeout(() => setCopied(false), 2000);
     }
   };
 
@@ -121,56 +120,45 @@ export function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title={createdResult ? 'User Created Successfully' : 'Add New Portal User'}
+      title={createdResult ? 'User Created' : 'Add user'}
       description={
         createdResult
-          ? 'Securely share these credentials with the user.'
-          : 'Create a new login for a distributor partner or Zee Sip internal staff.'
+          ? 'Copy and share this password now. It will not be shown again.'
+          : 'Create a new distributor or staff login.'
       }
       maxWidth="md"
     >
       {createdResult ? (
-        /* Single-view password reveal state */
-        <div className="space-y-5">
-          <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 flex items-start gap-3">
-            <UserCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-            <div className="text-sm">
-              <span className="font-semibold text-emerald-950 block">
-                {createdResult.user.name} ({createdResult.user.role === 'distributor' ? 'Distributor' : 'Zee Sip Staff'})
-              </span>
-              <span className="text-emerald-700 font-mono text-xs">
-                Username: @{createdResult.user.username}
-              </span>
-            </div>
+        <div className="space-y-4">
+          <div className="p-3 rounded-[6px] border border-[#E5E5E5] bg-neutral-50 text-xs">
+            <span className="font-medium text-black block">{createdResult.user.name}</span>
+            <span className="text-[#555555]">@{createdResult.user.username} &bull; {createdResult.user.role === 'distributor' ? 'Distributor' : 'Zee Sip staff'}</span>
           </div>
 
-          <div className="p-4 rounded-xl bg-amber-50/80 border border-amber-300">
-            <div className="flex items-center gap-2 text-amber-800 text-xs font-semibold mb-2">
-              <AlertTriangle className="w-4 h-4 text-amber-600" />
-              <span>One-Time Password Display</span>
-            </div>
-            <p className="text-xs text-amber-900 mb-3 leading-relaxed">
-              For security, this password is hashed with bcrypt and cannot be retrieved later.
-              Please copy and share it with the user right now.
-            </p>
-
+          <div>
+            <label className="block text-xs font-medium text-black mb-1">
+              One-Time Password
+            </label>
             <div className="flex items-center gap-2">
-              <div className="flex-1 bg-white border border-amber-200 rounded-lg px-3 py-2 text-sm font-mono font-bold text-slate-800 select-all tracking-wide break-all">
-                {createdResult.plainPassword}
-              </div>
+              <input
+                type="text"
+                readOnly
+                value={createdResult.plainPassword}
+                className="flex-1 bg-white border border-[#D4D4D4] rounded-[8px] px-3 py-2 text-xs font-mono text-black select-all"
+              />
               <button
                 type="button"
                 onClick={handleCopyPassword}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold shadow-sm transition-all shrink-0"
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[8px] bg-black text-white text-xs font-medium hover:bg-neutral-800 transition-colors shrink-0"
               >
                 {copied ? (
                   <>
-                    <Check className="w-4 h-4 text-emerald-300" />
-                    <span>Copied!</span>
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Copied</span>
                   </>
                 ) : (
                   <>
-                    <Copy className="w-4 h-4" />
+                    <Copy className="w-3.5 h-3.5" />
                     <span>Copy</span>
                   </>
                 )}
@@ -182,130 +170,111 @@ export function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps
             <button
               type="button"
               onClick={handleClose}
-              className="px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 transition-colors"
+              className="px-4 py-2 rounded-[8px] bg-black text-white text-xs font-medium hover:bg-neutral-800 transition-colors"
             >
-              Done & Close
+              Done
             </button>
           </div>
         </div>
       ) : (
-        /* Create user form */
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3.5">
           {error && (
-            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
+            <div className="p-2.5 rounded-[6px] bg-red-50 border border-red-200 text-red-600 text-xs font-medium">
               {error}
             </div>
           )}
 
-          {/* Full Name */}
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">
+            <label className="block text-xs font-medium text-black mb-1">
               Full Name
             </label>
             <input
               type="text"
               value={name}
               onChange={(e) => handleNameChange(e.target.value)}
-              placeholder="e.g. Sarah Jenkins or Metro Beverages"
+              placeholder="e.g. Sarah Jenkins"
               required
-              className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+              className="w-full px-3 py-1.5 bg-white border border-[#D4D4D4] rounded-[8px] text-xs text-black focus:outline-none focus:border-black"
             />
           </div>
 
-          {/* Role / Type Dropdown */}
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">
-              User Type / Role
+            <label className="block text-xs font-medium text-black mb-1">
+              Type
             </label>
             <select
               value={role}
               onChange={(e) => setRole(e.target.value as 'distributor' | 'zeesip_staff')}
-              className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+              className="w-full px-3 py-1.5 bg-white border border-[#D4D4D4] rounded-[8px] text-xs text-black focus:outline-none focus:border-black"
             >
               <option value="distributor">Distributor</option>
-              <option value="zeesip_staff">Zee Sip Staff</option>
+              <option value="zeesip_staff">Zee Sip staff</option>
             </select>
           </div>
 
-          {/* Username */}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
+              <label className="block text-xs font-medium text-black">
                 Username
               </label>
               {!isUsernameCustom && username && (
-                <span className="text-[11px] text-emerald-700 font-medium">Auto-suggested</span>
+                <span className="text-[10px] text-[#555555]">Auto-suggested</span>
               )}
             </div>
-            <div className="relative">
-              <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 font-mono text-xs">
-                @
-              </span>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => handleUsernameChange(e.target.value)}
-                placeholder="username"
-                required
-                className="w-full pl-8 pr-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm font-mono focus:ring-2 focus:ring-emerald-600 focus:outline-none"
-              />
-            </div>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => handleUsernameChange(e.target.value)}
+              placeholder="username"
+              required
+              className="w-full px-3 py-1.5 bg-white border border-[#D4D4D4] rounded-[8px] text-xs font-mono text-black focus:outline-none focus:border-black"
+            />
           </div>
 
-          {/* Password */}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
+              <label className="block text-xs font-medium text-black">
                 Password
               </label>
               <button
                 type="button"
                 onClick={handleGeneratePassword}
-                className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-800 hover:underline"
+                className="text-[11px] text-black hover:underline"
               >
-                <RefreshCw className="w-3 h-3" />
-                <span>Generate Strong</span>
+                Generate strong
               </button>
             </div>
-            <div className="relative">
-              <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
-                <KeyRound className="w-4 h-4" />
-              </span>
-              <input
-                type="text"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter password or click Generate"
-                required
-                className="w-full pl-10 pr-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm font-mono focus:ring-2 focus:ring-emerald-600 focus:outline-none"
-              />
-            </div>
-            <p className="mt-1 text-[11px] text-slate-500">
-              Generated passwords will be displayed once after creation for you to copy.
-            </p>
+            <input
+              type="text"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter password or click Generate"
+              required
+              className="w-full px-3 py-1.5 bg-white border border-[#D4D4D4] rounded-[8px] text-xs font-mono text-black focus:outline-none focus:border-black"
+            />
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#E5E5E5]">
             <button
               type="button"
               onClick={handleClose}
               disabled={isLoading}
-              className="px-4 py-2 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-100 transition-colors"
+              className="px-3 py-1.5 rounded-[8px] text-xs text-[#555555] hover:text-black hover:bg-neutral-50 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isLoading}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-semibold shadow-md shadow-emerald-900/10 transition-all disabled:opacity-60"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-[8px] bg-black text-white text-xs font-medium hover:bg-neutral-800 transition-colors disabled:opacity-50"
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Saving...</span>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Creating...</span>
                 </>
               ) : (
-                <span>Create User</span>
+                <span>Create user</span>
               )}
             </button>
           </div>

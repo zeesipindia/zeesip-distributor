@@ -1,12 +1,17 @@
 import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
 import './globals.css';
+
+const inter = Inter({
+  subsets: ['latin'],
+  weight: ['400', '500', '600'],
+  variable: '--font-inter',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'Zee Sip Distributor Portal',
-  description: 'Official distributor and operations portal for Zee Sip',
-  icons: {
-    icon: '/favicon.ico',
-  },
+  description: 'Distributor and operations portal for Zee Sip',
 };
 
 export default function RootLayout({
@@ -15,8 +20,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="h-full">
-      <body className="h-full antialiased font-sans bg-slate-50 text-slate-900 selection:bg-emerald-600 selection:text-white">
+    <html lang="en" className={`h-full ${inter.variable}`}>
+      <body className="h-full bg-white text-black font-sans antialiased selection:bg-neutral-200 selection:text-black">
         {children}
       </body>
     </html>

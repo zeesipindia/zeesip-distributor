@@ -65,31 +65,31 @@ export function EditUserModal({ isOpen, user, onClose, onUserUpdated }: EditUser
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Edit User Profile"
+      title="Edit User"
       description={`Update account details for @${user.username}`}
       maxWidth="md"
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-3.5">
         {error && (
-          <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
+          <div className="p-2.5 rounded-[6px] bg-red-50 border border-red-200 text-red-600 text-xs font-medium">
             {error}
           </div>
         )}
 
         <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">
-            Username (Permanent)
+          <label className="block text-xs font-medium text-black mb-1">
+            Username
           </label>
           <input
             type="text"
             value={user.username}
             disabled
-            className="w-full px-3.5 py-2 bg-slate-100 border border-slate-200 rounded-xl text-sm font-mono text-slate-500 cursor-not-allowed"
+            className="w-full px-3 py-1.5 bg-neutral-100 border border-[#E5E5E5] rounded-[8px] text-xs font-mono text-[#737373] cursor-not-allowed"
           />
         </div>
 
         <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">
+          <label className="block text-xs font-medium text-black mb-1">
             Full Name
           </label>
           <input
@@ -97,45 +97,45 @@ export function EditUserModal({ isOpen, user, onClose, onUserUpdated }: EditUser
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
-            className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+            className="w-full px-3 py-1.5 bg-white border border-[#D4D4D4] rounded-[8px] text-xs text-black focus:outline-none focus:border-black"
           />
         </div>
 
         <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">
-            User Type / Role
+          <label className="block text-xs font-medium text-black mb-1">
+            Type
           </label>
           <select
             value={role}
             onChange={(e) => setRole(e.target.value as 'distributor' | 'zeesip_staff')}
-            className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+            className="w-full px-3 py-1.5 bg-white border border-[#D4D4D4] rounded-[8px] text-xs text-black focus:outline-none focus:border-black"
           >
             <option value="distributor">Distributor</option>
-            <option value="zeesip_staff">Zee Sip Staff</option>
+            <option value="zeesip_staff">Zee Sip staff</option>
           </select>
         </div>
 
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+        <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#E5E5E5]">
           <button
             type="button"
             onClick={onClose}
             disabled={isLoading}
-            className="px-4 py-2 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-100 transition-colors"
+            className="px-3 py-1.5 rounded-[8px] text-xs text-[#555555] hover:text-black hover:bg-neutral-50 transition-colors"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={isLoading}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-semibold shadow-md shadow-emerald-900/10 transition-all disabled:opacity-60"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-[8px] bg-black text-white text-xs font-medium hover:bg-neutral-800 transition-colors disabled:opacity-50"
           >
             {isLoading ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 <span>Saving...</span>
               </>
             ) : (
-              <span>Save Changes</span>
+              <span>Save changes</span>
             )}
           </button>
         </div>

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { PortalUserPublic } from '@/lib/types';
 import { generateStrongPassword } from '@/lib/utils';
-import { KeyRound, RefreshCw, Copy, Check, AlertTriangle, Loader2 } from 'lucide-react';
+import { Copy, Check, Loader2 } from 'lucide-react';
 
 interface ResetPasswordModalProps {
   isOpen: boolean;
@@ -63,7 +63,7 @@ export function ResetPasswordModal({ isOpen, user, onClose }: ResetPasswordModal
     if (revealedPassword) {
       navigator.clipboard.writeText(revealedPassword);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
+      setTimeout(() => setCopied(false), 2000);
     }
   };
 
@@ -79,43 +79,40 @@ export function ResetPasswordModal({ isOpen, user, onClose }: ResetPasswordModal
     <Modal
       isOpen={isOpen}
       onClose={handleModalClose}
-      title={revealedPassword ? 'Password Reset Complete' : `Reset Password for ${user.name}`}
+      title={revealedPassword ? 'Password Reset' : `Reset password`}
       description={
         revealedPassword
-          ? 'Copy and share this new credential with the user.'
-          : `Create or generate a new login password for @${user.username}.`
+          ? `Copy this password for @${user.username}. It will not be shown again.`
+          : `Create a new password for ${user.name} (@${user.username}).`
       }
       maxWidth="md"
     >
       {revealedPassword ? (
-        <div className="space-y-5">
-          <div className="p-4 rounded-xl bg-amber-50/80 border border-amber-300">
-            <div className="flex items-center gap-2 text-amber-800 text-xs font-semibold mb-2">
-              <AlertTriangle className="w-4 h-4 text-amber-600" />
-              <span>One-Time Password Display</span>
-            </div>
-            <p className="text-xs text-amber-900 mb-3 leading-relaxed">
-              This newly generated password has been hashed and saved. It will not be shown again.
-              Copy and share it with <strong>{user.name}</strong> (@{user.username}).
-            </p>
-
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-black mb-1">
+              New Password
+            </label>
             <div className="flex items-center gap-2">
-              <div className="flex-1 bg-white border border-amber-200 rounded-lg px-3 py-2 text-sm font-mono font-bold text-slate-800 select-all tracking-wide break-all">
-                {revealedPassword}
-              </div>
+              <input
+                type="text"
+                readOnly
+                value={revealedPassword}
+                className="flex-1 bg-white border border-[#D4D4D4] rounded-[8px] px-3 py-2 text-xs font-mono text-black select-all"
+              />
               <button
                 type="button"
                 onClick={handleCopy}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold shadow-sm transition-all shrink-0"
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[8px] bg-black text-white text-xs font-medium hover:bg-neutral-800 transition-colors shrink-0"
               >
                 {copied ? (
                   <>
-                    <Check className="w-4 h-4 text-emerald-300" />
-                    <span>Copied!</span>
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Copied</span>
                   </>
                 ) : (
                   <>
-                    <Copy className="w-4 h-4" />
+                    <Copy className="w-3.5 h-3.5" />
                     <span>Copy</span>
                   </>
                 )}
@@ -127,70 +124,64 @@ export function ResetPasswordModal({ isOpen, user, onClose }: ResetPasswordModal
             <button
               type="button"
               onClick={handleModalClose}
-              className="px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 transition-colors"
+              className="px-4 py-2 rounded-[8px] bg-black text-white text-xs font-medium hover:bg-neutral-800 transition-colors"
             >
-              Done & Close
+              Done
             </button>
           </div>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3.5">
           {error && (
-            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
+            <div className="p-2.5 rounded-[6px] bg-red-50 border border-red-200 text-red-600 text-xs font-medium">
               {error}
             </div>
           )}
 
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
+              <label className="block text-xs font-medium text-black">
                 New Password
               </label>
               <button
                 type="button"
                 onClick={handleGenerate}
-                className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-800 hover:underline"
+                className="text-[11px] text-black hover:underline"
               >
-                <RefreshCw className="w-3 h-3" />
-                <span>Generate Strong</span>
+                Generate strong
               </button>
             </div>
-            <div className="relative">
-              <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
-                <KeyRound className="w-4 h-4" />
-              </span>
-              <input
-                type="text"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter new password or click Generate"
-                required
-                className="w-full pl-10 pr-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm font-mono focus:ring-2 focus:ring-emerald-600 focus:outline-none"
-              />
-            </div>
+            <input
+              type="text"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter new password or click Generate"
+              required
+              className="w-full px-3 py-1.5 bg-white border border-[#D4D4D4] rounded-[8px] text-xs font-mono text-black focus:outline-none focus:border-black"
+            />
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#E5E5E5]">
             <button
               type="button"
               onClick={handleModalClose}
               disabled={isLoading}
-              className="px-4 py-2 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-100 transition-colors"
+              className="px-3 py-1.5 rounded-[8px] text-xs text-[#555555] hover:text-black hover:bg-neutral-50 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isLoading}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-semibold shadow-md shadow-emerald-900/10 transition-all disabled:opacity-60"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-[8px] bg-black text-white text-xs font-medium hover:bg-neutral-800 transition-colors disabled:opacity-50"
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   <span>Updating...</span>
                 </>
               ) : (
-                <span>Confirm & Update Password</span>
+                <span>Update password</span>
               )}
             </button>
           </div>

@@ -7,14 +7,7 @@ import { AddUserModal } from '@/components/admin/AddUserModal';
 import { EditUserModal } from '@/components/admin/EditUserModal';
 import { ResetPasswordModal } from '@/components/admin/ResetPasswordModal';
 import { DeleteUserModal } from '@/components/admin/DeleteUserModal';
-import {
-  UserPlus,
-  Search,
-  Users,
-  Truck,
-  Building2,
-  RefreshCw,
-} from 'lucide-react';
+import { Plus, Search, RefreshCw } from 'lucide-react';
 
 export default function UsersAdminPage() {
   const [users, setUsers] = useState<PortalUserPublic[]>([]);
@@ -50,7 +43,7 @@ export default function UsersAdminPage() {
     }
   }, [roleFilter, searchQuery]);
 
-  // Debounced search / load
+  // Debounced search
   useEffect(() => {
     const timer = setTimeout(() => {
       loadUsers();
@@ -58,7 +51,7 @@ export default function UsersAdminPage() {
     return () => clearTimeout(timer);
   }, [loadUsers]);
 
-  // Real-time statistics
+  // Summary counts
   const stats = useMemo(() => {
     const total = users.length;
     const distributors = users.filter((u) => u.role === 'distributor').length;
@@ -98,12 +91,12 @@ export default function UsersAdminPage() {
 
   return (
     <div className="space-y-6">
-      {/* Top Banner & Action */}
+      {/* Top Header & Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-900">Portal Users</h2>
-          <p className="text-sm text-slate-500 mt-0.5">
-            Manage distributor partner accounts and Zee Sip staff credentials.
+          <h2 className="text-lg font-semibold text-black tracking-tight">Users</h2>
+          <p className="text-xs text-[#555555] mt-0.5">
+            Manage distributor and staff accounts
           </p>
         </div>
 
@@ -112,114 +105,94 @@ export default function UsersAdminPage() {
             type="button"
             onClick={() => loadUsers()}
             disabled={isLoading}
-            className="p-2.5 rounded-xl border border-slate-200 bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors"
-            title="Refresh list"
+            className="p-2 rounded-[8px] border border-[#E5E5E5] bg-white text-[#555555] hover:text-black hover:bg-neutral-50 transition-colors"
+            title="Refresh"
           >
-            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
           </button>
 
           <button
             type="button"
             onClick={() => setIsAddOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-semibold shadow-md shadow-emerald-900/15 transition-all"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[8px] bg-black text-white text-xs font-medium hover:bg-neutral-800 transition-colors"
           >
-            <UserPlus className="w-4 h-4" />
-            <span>Add User</span>
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add user</span>
           </button>
         </div>
       </div>
 
       {/* Metrics Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              Total Users
-            </span>
-            <Users className="w-4 h-4 text-slate-400" />
-          </div>
-          <div className="text-2xl font-extrabold text-slate-900 mt-2">{stats.total}</div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="bg-white p-3.5 rounded-[8px] border border-[#E5E5E5]">
+          <span className="text-[11px] text-[#555555] font-normal block">Total</span>
+          <div className="text-lg font-semibold text-black mt-1">{stats.total}</div>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">
-              Distributors
-            </span>
-            <Truck className="w-4 h-4 text-emerald-600" />
-          </div>
-          <div className="text-2xl font-extrabold text-slate-900 mt-2">{stats.distributors}</div>
+        <div className="bg-white p-3.5 rounded-[8px] border border-[#E5E5E5]">
+          <span className="text-[11px] text-[#555555] font-normal block">Distributors</span>
+          <div className="text-lg font-semibold text-black mt-1">{stats.distributors}</div>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-teal-700 uppercase tracking-wider">
-              Zee Sip Staff
-            </span>
-            <Building2 className="w-4 h-4 text-teal-600" />
-          </div>
-          <div className="text-2xl font-extrabold text-slate-900 mt-2">{stats.staff}</div>
+        <div className="bg-white p-3.5 rounded-[8px] border border-[#E5E5E5]">
+          <span className="text-[11px] text-[#555555] font-normal block">Zee Sip staff</span>
+          <div className="text-lg font-semibold text-black mt-1">{stats.staff}</div>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              Active Logins
-            </span>
-            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-          </div>
-          <div className="text-2xl font-extrabold text-slate-900 mt-2">{stats.active}</div>
+        <div className="bg-white p-3.5 rounded-[8px] border border-[#E5E5E5]">
+          <span className="text-[11px] text-[#555555] font-normal block">Active</span>
+          <div className="text-lg font-semibold text-black mt-1">{stats.active}</div>
         </div>
       </div>
 
-      {/* Filters and Search Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
-        {/* Search Input */}
-        <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+      {/* Search and Filters */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        {/* Search */}
+        <div className="relative flex-1 max-w-sm">
+          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#737373]" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by name or username..."
-            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+            className="w-full pl-8 pr-3 py-1.5 bg-white border border-[#D4D4D4] rounded-[8px] text-xs text-black placeholder-[#A3A3A3] focus:outline-none focus:border-black transition-colors"
           />
         </div>
 
-        {/* Role Filter Tabs */}
-        <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl overflow-x-auto">
+        {/* Filter */}
+        <div className="flex items-center gap-1 border-b sm:border border-[#E5E5E5] sm:rounded-[8px] p-0.5">
           <button
             type="button"
             onClick={() => setRoleFilter('all')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+            className={`px-2.5 py-1 text-xs transition-colors rounded-[6px] ${
               roleFilter === 'all'
-                ? 'bg-white text-emerald-800 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-neutral-100 text-black font-medium'
+                : 'text-[#555555] hover:text-black'
             }`}
           >
-            All Accounts
+            All
           </button>
           <button
             type="button"
             onClick={() => setRoleFilter('distributor')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+            className={`px-2.5 py-1 text-xs transition-colors rounded-[6px] ${
               roleFilter === 'distributor'
-                ? 'bg-white text-emerald-800 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-neutral-100 text-black font-medium'
+                : 'text-[#555555] hover:text-black'
             }`}
           >
-            Distributors
+            Distributor
           </button>
           <button
             type="button"
             onClick={() => setRoleFilter('zeesip_staff')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+            className={`px-2.5 py-1 text-xs transition-colors rounded-[6px] ${
               roleFilter === 'zeesip_staff'
-                ? 'bg-white text-emerald-800 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-neutral-100 text-black font-medium'
+                : 'text-[#555555] hover:text-black'
             }`}
           >
-            Zee Sip Staff
+            Zee Sip staff
           </button>
         </div>
       </div>

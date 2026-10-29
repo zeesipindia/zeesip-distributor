@@ -27,7 +27,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Password is required' }, { status: 400 });
     }
 
-    const expectedAdminPassword = process.env.ADMIN_PASSWORD;
+    // Read and trim at request time
+    const submittedPassword = password.trim();
+    const expectedAdminPassword = (process.env.ADMIN_PASSWORD || '').trim();
+
+    // Temporary server-side log: only logs defined status and lengths (never values)
+    console.log('[DEBUG_AUTH]', {
+      envDefined: Boolean(process.env.ADMIN_PASSWORD),
+      envLength: expectedAdminPassword.length,
+      submittedLength: submittedPassword.length,
+    });
+
     if (!expectedAdminPassword) {
       console.error('CRITICAL: ADMIN_PASSWORD environment variable is not configured');
       return NextResponse.json(
@@ -36,8 +46,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. Perform constant-time comparison
-    const isValid = constantTimeCompare(password, expectedAdminPassword);
+    // 2. Perform constant-time comparison (hashes both to 32 bytes with SHA-256 before timingSafeEqual)
+    const isValid = constantTimeCompare(submittedPassword, expectedAdminPassword);
 
     if (!isValid) {
       const record = recordFailedAttempt(ip);

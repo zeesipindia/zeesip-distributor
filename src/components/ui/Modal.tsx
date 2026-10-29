@@ -42,35 +42,35 @@ export function Modal({
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
-        {/* Backdrop */}
+        {/* Minimal Backdrop */}
         <div
-          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
+          className="fixed inset-0 bg-black/30 transition-opacity"
           onClick={onClose}
         />
 
         {/* Modal Window */}
         <div
-          className={`relative transform overflow-hidden rounded-2xl bg-white text-left shadow-2xl transition-all sm:my-8 w-full ${maxWidthClass} border border-slate-200`}
+          className={`relative transform overflow-hidden rounded-[8px] bg-white text-left transition-all sm:my-8 w-full ${maxWidthClass} border border-[#E5E5E5] shadow-none`}
         >
           {/* Header */}
-          <div className="px-6 pt-6 pb-4 border-b border-slate-100 flex items-start justify-between">
+          <div className="px-5 pt-5 pb-3 border-b border-[#E5E5E5] flex items-start justify-between">
             <div>
-              <h3 className="text-lg font-bold text-slate-900 leading-snug">{title}</h3>
+              <h3 className="text-sm font-semibold text-black leading-snug">{title}</h3>
               {description && (
-                <p className="mt-1 text-xs text-slate-500">{description}</p>
+                <p className="mt-0.5 text-xs text-[#555555]">{description}</p>
               )}
             </div>
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+              className="p-1 rounded-[6px] text-[#555555] hover:text-black hover:bg-neutral-100 transition-colors"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
 
           {/* Body */}
-          <div className="px-6 py-5">{children}</div>
+          <div className="px-5 py-4">{children}</div>
         </div>
       </div>
     </div>
