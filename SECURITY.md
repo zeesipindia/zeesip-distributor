@@ -46,9 +46,9 @@
 - **Row Level Security (RLS)**:
   - Enabled on `portal_users` and `login_attempts`.
   - Zero public policies exist. Anon/publishable keys cannot read or write to these tables.
-  - All operations are executed server-side via `DATABASE_URL` (direct connection) or `SUPABASE_SERVICE_ROLE_KEY`.
+  - All operations are executed server-side via `SUPABASE_SERVICE_ROLE_KEY`.
 - **Secrets Isolation**:
-  - `DATABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_PASSWORD`, `PASSWORD_PEPPER`, and `SESSION_SECRET` are strictly server-side environment variables.
+  - `SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_PASSWORD`, `PASSWORD_PEPPER`, and `SESSION_SECRET` are strictly server-side environment variables.
   - Never prefix sensitive credentials with `NEXT_PUBLIC_` or import them into client components.
 
 ---

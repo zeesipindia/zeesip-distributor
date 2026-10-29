@@ -4,6 +4,23 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { DeliveredLocation } from '@/lib/types';
 import { KERALA_DISTRICTS } from '@/lib/auth';
+
+const DISTRICT_EXAMPLES: Record<string, string> = {
+  Thiruvananthapuram: 'e.g. Kazhakkoottam',
+  Kollam: 'e.g. Karunagappalli',
+  Pathanamthitta: 'e.g. Thiruvalla',
+  Alappuzha: 'e.g. Cherthala',
+  Kottayam: 'e.g. Changanassery',
+  Idukki: 'e.g. Thodupuzha',
+  Ernakulam: 'e.g. Aluva',
+  Thrissur: 'e.g. Chalakudy',
+  Palakkad: 'e.g. Ottapalam',
+  Malappuram: 'e.g. Tirur',
+  Kozhikode: 'e.g. Koyilandy',
+  Wayanad: 'e.g. Sulthan Bathery',
+  Kannur: 'e.g. Taliparamba',
+  Kasaragod: 'e.g. Kanhangad',
+};
 import { formatDate } from '@/lib/utils';
 import { ArrowLeft, Plus, Trash2, MapPin, Loader2, Calendar } from 'lucide-react';
 
@@ -172,33 +189,31 @@ export default function DistributorLocationsPage() {
               </select>
             </div>
 
-            {/* 2. Location (revealed after district chosen) */}
-            {district && (
-              <div>
-                <label className="block text-xs font-medium text-black mb-1">
-                  Location <span className="text-red-600">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="Town, area, shop or landmark"
-                  required
-                  maxLength={200}
-                  className="w-full min-h-[44px] px-3 py-2 bg-white border border-[#D4D4D4] rounded-[8px] text-xs text-black focus:outline-none focus:border-black"
-                />
-              </div>
-            )}
-
-            {/* 3. Details textarea */}
+            {/* 2. Location */}
             <div>
               <label className="block text-xs font-medium text-black mb-1">
-                Details <span className="text-[#737373] text-[11px] font-normal">(Optional)</span>
+                Location <span className="text-red-600">*</span>
+              </label>
+              <input
+                type="text"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder={district ? (DISTRICT_EXAMPLES[district] || 'e.g. Taliparamba, Kozhikode') : 'e.g. Taliparamba, Kozhikode'}
+                required
+                maxLength={200}
+                className="w-full min-h-[44px] px-3 py-2 bg-white border border-[#D4D4D4] rounded-[8px] text-xs text-black focus:outline-none focus:border-black"
+              />
+            </div>
+
+            {/* 3. Note textarea */}
+            <div>
+              <label className="block text-xs font-medium text-black mb-1">
+                Note (optional)
               </label>
               <textarea
                 value={details}
                 onChange={(e) => setDetails(e.target.value)}
-                placeholder="What was delivered, quantity, notes..."
+                placeholder="Add a note if you want"
                 maxLength={500}
                 rows={2}
                 className="w-full p-3 bg-white border border-[#D4D4D4] rounded-[8px] text-xs text-black focus:outline-none focus:border-black"

@@ -1,41 +1,28 @@
 import { NextRequest } from 'next/server';
-import { Pool } from 'pg';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_MINUTES = 15;
 
-let pgPool: Pool | null = null;
 let supabaseClient: SupabaseClient | null = null;
 
-function getSupabase(): SupabaseClient | null {
+function getSupabase(): SupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (url && serviceKey && serviceKey.trim().length > 0) {
-    if (!supabaseClient) {
-      supabaseClient = createClient(url, serviceKey, {
-        auth: { persistSession: false, autoRefreshToken: false },
-      });
-    }
-    return supabaseClient;
+  if (!url || !serviceKey) {
+    throw new Error('Supabase URL or Service Role Key missing in environment.');
   }
-  return null;
-}
 
-function getPgPool(): Pool {
-  if (!pgPool) {
-    const connString = process.env.DATABASE_URL;
-    if (connString) {
-      pgPool = new Pool({
-        connectionString: connString,
-        ssl: { rejectUnauthorized: false },
-      });
-    } else {
-      throw new Error('Database connection not configured for rate limiting.');
-    }
+  if (!supabaseClient) {
+    supabaseClient = createClient(url, serviceKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    });
   }
-  return pgPool;
+  return supabaseClient;
 }
 
 /**
@@ -74,63 +61,36 @@ export async function checkRateLimit(ip: string): Promise<{
     const supabase = getSupabase();
     const now = new Date();
 
-    if (supabase) {
-      const { data, error } = await supabase
-        .from('login_attempts')
-        .select('attempts, locked_until')
-        .eq('ip', ip)
-        .maybeSingle();
+    const { data, error } = await supabase
+      .from('login_attempts')
+      .select('attempts, locked_until')
+      .eq('ip', ip)
+      .maybeSingle();
 
-      if (error) {
-        console.error('Rate limit query error (Supabase):', error);
-        return { allowed: true, remaining: MAX_ATTEMPTS };
-      }
-
-      if (!data) {
-        return { allowed: true, remaining: MAX_ATTEMPTS };
-      }
-
-      if (data.locked_until) {
-        const lockedUntilDate = new Date(data.locked_until);
-        if (now < lockedUntilDate) {
-          return { allowed: false, remaining: 0, lockedUntil: lockedUntilDate };
-        } else {
-          // Lockout has expired; reset
-          await resetRateLimit(ip);
-          return { allowed: true, remaining: MAX_ATTEMPTS };
-        }
-      }
-
-      const remaining = Math.max(0, MAX_ATTEMPTS - (data.attempts || 0));
-      return { allowed: remaining > 0, remaining };
-    }
-
-    // Direct PostgreSQL query
-    const pool = getPgPool();
-    const res = await pool.query(
-      'SELECT attempts, locked_until FROM login_attempts WHERE ip = $1',
-      [ip]
-    );
-
-    if (res.rows.length === 0) {
+    if (error) {
+      console.error('[RATE_LIMIT_CHECK_ERROR]', { message: error.message, code: error.code });
       return { allowed: true, remaining: MAX_ATTEMPTS };
     }
 
-    const row = res.rows[0];
-    if (row.locked_until) {
-      const lockedUntilDate = new Date(row.locked_until);
+    if (!data) {
+      return { allowed: true, remaining: MAX_ATTEMPTS };
+    }
+
+    if (data.locked_until) {
+      const lockedUntilDate = new Date(data.locked_until);
       if (now < lockedUntilDate) {
         return { allowed: false, remaining: 0, lockedUntil: lockedUntilDate };
       } else {
+        // Lockout has expired; reset
         await resetRateLimit(ip);
         return { allowed: true, remaining: MAX_ATTEMPTS };
       }
     }
 
-    const remaining = Math.max(0, MAX_ATTEMPTS - (row.attempts || 0));
+    const remaining = Math.max(0, MAX_ATTEMPTS - (data.attempts || 0));
     return { allowed: remaining > 0, remaining };
   } catch (err) {
-    console.error('Error in checkRateLimit:', err);
+    console.error('[RATE_LIMIT_CHECK_EXCEPTION]', { message: (err as Error).message });
     // Fail open safely if DB rate-limit query errors to prevent blocking legitimate logins
     return { allowed: true, remaining: MAX_ATTEMPTS };
   }
@@ -146,44 +106,54 @@ export async function recordFailedAttempt(ip: string): Promise<{
   lockedUntil?: Date;
 }> {
   try {
-    const pool = getPgPool();
+    const supabase = getSupabase();
     const now = new Date();
 
-    const sql = `
-      INSERT INTO login_attempts (ip, attempts, locked_until, updated_at)
-      VALUES ($1, 1, NULL, NOW())
-      ON CONFLICT (ip) DO UPDATE SET
-        attempts = CASE
-          WHEN login_attempts.locked_until IS NOT NULL AND login_attempts.locked_until < NOW() THEN 1
-          ELSE login_attempts.attempts + 1
-        END,
-        locked_until = CASE
-          WHEN login_attempts.attempts + 1 >= ${MAX_ATTEMPTS} THEN NOW() + INTERVAL '${LOCKOUT_MINUTES} minutes'
-          ELSE NULL
-        END,
-        updated_at = NOW()
-      RETURNING attempts, locked_until;
-    `;
+    const { data, error } = await supabase
+      .from('login_attempts')
+      .select('attempts, locked_until')
+      .eq('ip', ip)
+      .maybeSingle();
 
-    const res = await pool.query(sql, [ip]);
-    const row = res.rows[0];
-
-    if (row.locked_until) {
-      const lockedDate = new Date(row.locked_until);
-      return {
-        isLocked: true,
-        remainingAttempts: 0,
-        lockedUntil: lockedDate,
-      };
+    if (error) {
+      console.error('[RATE_LIMIT_FETCH_ERROR]', { message: error.message, code: error.code });
     }
 
-    const remaining = Math.max(0, MAX_ATTEMPTS - (row.attempts || 0));
+    let currentAttempts = data?.attempts || 0;
+    if (data?.locked_until && new Date(data.locked_until) < now) {
+      currentAttempts = 0; // Lockout expired, reset counter
+    }
+
+    const nextAttempts = currentAttempts + 1;
+    const isLocked = nextAttempts >= MAX_ATTEMPTS;
+    const lockedUntil = isLocked
+      ? new Date(now.getTime() + LOCKOUT_MINUTES * 60 * 1000)
+      : null;
+
+    const { error: upsertError } = await supabase
+      .from('login_attempts')
+      .upsert(
+        {
+          ip,
+          attempts: nextAttempts,
+          locked_until: lockedUntil ? lockedUntil.toISOString() : null,
+          updated_at: now.toISOString(),
+        },
+        { onConflict: 'ip' }
+      );
+
+    if (upsertError) {
+      console.error('[RATE_LIMIT_UPSERT_ERROR]', { message: upsertError.message, code: upsertError.code });
+    }
+
+    const remaining = Math.max(0, MAX_ATTEMPTS - nextAttempts);
     return {
-      isLocked: false,
+      isLocked,
       remainingAttempts: remaining,
+      lockedUntil: lockedUntil || undefined,
     };
   } catch (err) {
-    console.error('Error in recordFailedAttempt:', err);
+    console.error('[RATE_LIMIT_RECORD_EXCEPTION]', { message: (err as Error).message });
     return { isLocked: false, remainingAttempts: MAX_ATTEMPTS - 1 };
   }
 }
@@ -194,14 +164,11 @@ export async function recordFailedAttempt(ip: string): Promise<{
 export async function resetRateLimit(ip: string): Promise<void> {
   try {
     const supabase = getSupabase();
-    if (supabase) {
-      await supabase.from('login_attempts').delete().eq('ip', ip);
-      return;
+    const { error } = await supabase.from('login_attempts').delete().eq('ip', ip);
+    if (error) {
+      console.error('[RATE_LIMIT_RESET_ERROR]', { message: error.message, code: error.code });
     }
-
-    const pool = getPgPool();
-    await pool.query('DELETE FROM login_attempts WHERE ip = $1', [ip]);
   } catch (err) {
-    console.error('Error in resetRateLimit:', err);
+    console.error('[RATE_LIMIT_RESET_EXCEPTION]', { message: (err as Error).message });
   }
 }

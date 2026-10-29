@@ -1,5 +1,4 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Pool } from 'pg';
 import {
   PortalUser,
   PortalUserPublic,
@@ -8,87 +7,55 @@ import {
   DistributorDeliverySummary,
 } from './types';
 
-let pgPool: Pool | null = null;
 let supabaseClient: SupabaseClient | null = null;
 
-function getSupabase(): SupabaseClient | null {
+function getSupabase(): SupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (url && serviceKey && serviceKey.trim().length > 0) {
-    if (!supabaseClient) {
-      supabaseClient = createClient(url, serviceKey, {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-        },
-      });
-    }
-    return supabaseClient;
+  if (!url || !serviceKey) {
+    throw new Error('Supabase URL or Service Role Key missing in environment.');
   }
-  return null;
-}
 
-function getPgPool(): Pool {
-  if (!pgPool) {
-    const connString = process.env.DATABASE_URL;
-    if (connString) {
-      pgPool = new Pool({
-        connectionString: connString,
-        ssl: { rejectUnauthorized: false },
-      });
-    } else {
-      throw new Error('DATABASE_URL is not configured in environment.');
-    }
+  if (!supabaseClient) {
+    supabaseClient = createClient(url, serviceKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    });
   }
-  return pgPool;
+  return supabaseClient;
 }
 
 export async function findUserByPasswordLookup(passwordLookup: string): Promise<PortalUser | null> {
   const supabase = getSupabase();
-  if (supabase) {
-    const { data, error } = await supabase
-      .from('portal_users')
-      .select('*')
-      .eq('password_lookup', passwordLookup)
-      .maybeSingle();
+  const { data, error } = await supabase
+    .from('portal_users')
+    .select('*')
+    .eq('password_lookup', passwordLookup)
+    .maybeSingle();
 
-    if (error) {
-      console.error('[DB_ERROR_FIND_LOOKUP]', { message: error.message, code: error.code });
-      throw error;
-    }
-    return data as PortalUser | null;
+  if (error) {
+    console.error('[DB_ERROR_FIND_LOOKUP]', { message: error.message, code: error.code });
+    throw error;
   }
-
-  const pool = getPgPool();
-  const res = await pool.query(
-    'SELECT * FROM portal_users WHERE password_lookup = $1 LIMIT 1',
-    [passwordLookup]
-  );
-  if (res.rows.length === 0) return null;
-  return res.rows[0] as PortalUser;
+  return data as PortalUser | null;
 }
 
 export async function findUserById(id: string): Promise<PortalUser | null> {
   const supabase = getSupabase();
-  if (supabase) {
-    const { data, error } = await supabase
-      .from('portal_users')
-      .select('*')
-      .eq('id', id)
-      .maybeSingle();
+  const { data, error } = await supabase
+    .from('portal_users')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
 
-    if (error) {
-      console.error('[DB_ERROR_FIND_ID]', { message: error.message, code: error.code });
-      throw error;
-    }
-    return data as PortalUser | null;
+  if (error) {
+    console.error('[DB_ERROR_FIND_ID]', { message: error.message, code: error.code });
+    throw error;
   }
-
-  const pool = getPgPool();
-  const res = await pool.query('SELECT * FROM portal_users WHERE id = $1 LIMIT 1', [id]);
-  if (res.rows.length === 0) return null;
-  return res.rows[0] as PortalUser;
+  return data as PortalUser | null;
 }
 
 export async function listUsers(filter?: {
@@ -96,46 +63,24 @@ export async function listUsers(filter?: {
   role?: string;
 }): Promise<(PortalUserPublic & { password_enc?: string | null })[]> {
   const supabase = getSupabase();
-  if (supabase) {
-    let query = supabase
-      .from('portal_users')
-      .select('id, name, role, is_active, created_at, password_enc')
-      .order('created_at', { ascending: false });
-
-    if (filter?.role && filter.role !== 'all') {
-      query = query.eq('role', filter.role);
-    }
-    if (filter?.search && filter.search.trim().length > 0) {
-      query = query.ilike('name', `%${filter.search.trim()}%`);
-    }
-
-    const { data, error } = await query;
-    if (error) {
-      console.error('[DB_ERROR_LIST_USERS]', { message: error.message, code: error.code });
-      throw error;
-    }
-    return (data || []) as (PortalUserPublic & { password_enc?: string | null })[];
-  }
-
-  const pool = getPgPool();
-  const conditions: string[] = [];
-  const params: unknown[] = [];
+  let query = supabase
+    .from('portal_users')
+    .select('id, name, role, is_active, created_at, password_enc')
+    .order('created_at', { ascending: false });
 
   if (filter?.role && filter.role !== 'all') {
-    params.push(filter.role);
-    conditions.push(`role = $${params.length}`);
+    query = query.eq('role', filter.role);
   }
-
   if (filter?.search && filter.search.trim().length > 0) {
-    params.push(`%${filter.search.trim()}%`);
-    conditions.push(`name ILIKE $${params.length}`);
+    query = query.ilike('name', `%${filter.search.trim()}%`);
   }
 
-  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-  const sql = `SELECT id, name, role, is_active, created_at, password_enc FROM portal_users ${whereClause} ORDER BY created_at DESC`;
-
-  const res = await pool.query(sql, params);
-  return res.rows as (PortalUserPublic & { password_enc?: string | null })[];
+  const { data, error } = await query;
+  if (error) {
+    console.error('[DB_ERROR_LIST_USERS]', { message: error.message, code: error.code });
+    throw error;
+  }
+  return (data || []) as (PortalUserPublic & { password_enc?: string | null })[];
 }
 
 export async function createUser(data: {
@@ -146,35 +91,24 @@ export async function createUser(data: {
   password_enc?: string | null;
 }): Promise<PortalUserPublic> {
   const supabase = getSupabase();
-  if (supabase) {
-    const { data: created, error } = await supabase
-      .from('portal_users')
-      .insert({
-        name: data.name.trim(),
-        role: data.role,
-        password_hash: data.password_hash,
-        password_lookup: data.password_lookup,
-        password_enc: data.password_enc || null,
-        is_active: true,
-      })
-      .select('id, name, role, is_active, created_at')
-      .single();
+  const { data: created, error } = await supabase
+    .from('portal_users')
+    .insert({
+      name: data.name.trim(),
+      role: data.role,
+      password_hash: data.password_hash,
+      password_lookup: data.password_lookup,
+      password_enc: data.password_enc || null,
+      is_active: true,
+    })
+    .select('id, name, role, is_active, created_at')
+    .single();
 
-    if (error) {
-      console.error('[DB_ERROR_CREATE_USER]', { message: error.message, code: error.code });
-      throw error;
-    }
-    return created as PortalUserPublic;
+  if (error) {
+    console.error('[DB_ERROR_CREATE_USER]', { message: error.message, code: error.code });
+    throw error;
   }
-
-  const pool = getPgPool();
-  const res = await pool.query(
-    `INSERT INTO portal_users (name, role, password_hash, password_lookup, password_enc, is_active)
-     VALUES ($1, $2, $3, $4, $5, true)
-     RETURNING id, name, role, is_active, created_at`,
-    [data.name.trim(), data.role, data.password_hash, data.password_lookup, data.password_enc || null]
-  );
-  return res.rows[0] as PortalUserPublic;
+  return created as PortalUserPublic;
 }
 
 export async function updateUser(
@@ -189,138 +123,70 @@ export async function updateUser(
   }
 ): Promise<PortalUserPublic> {
   const supabase = getSupabase();
-  if (supabase) {
-    const patchData: Record<string, unknown> = {};
-    if (updates.name !== undefined) patchData.name = updates.name.trim();
-    if (updates.role !== undefined) patchData.role = updates.role;
-    if (updates.is_active !== undefined) patchData.is_active = updates.is_active;
-    if (updates.password_hash !== undefined) patchData.password_hash = updates.password_hash;
-    if (updates.password_lookup !== undefined) patchData.password_lookup = updates.password_lookup;
-    if (updates.password_enc !== undefined) patchData.password_enc = updates.password_enc;
+  const patchData: Record<string, unknown> = {};
+  if (updates.name !== undefined) patchData.name = updates.name.trim();
+  if (updates.role !== undefined) patchData.role = updates.role;
+  if (updates.is_active !== undefined) patchData.is_active = updates.is_active;
+  if (updates.password_hash !== undefined) patchData.password_hash = updates.password_hash;
+  if (updates.password_lookup !== undefined) patchData.password_lookup = updates.password_lookup;
+  if (updates.password_enc !== undefined) patchData.password_enc = updates.password_enc;
 
-    const { data, error } = await supabase
-      .from('portal_users')
-      .update(patchData)
-      .eq('id', id)
-      .select('id, name, role, is_active, created_at')
-      .single();
-
-    if (error) {
-      console.error('[DB_ERROR_UPDATE_USER]', { message: error.message, code: error.code });
-      throw error;
-    }
-    return data as PortalUserPublic;
-  }
-
-  const pool = getPgPool();
-  const setClauses: string[] = [];
-  const params: unknown[] = [id];
-
-  if (updates.name !== undefined) {
-    params.push(updates.name.trim());
-    setClauses.push(`name = $${params.length}`);
-  }
-  if (updates.role !== undefined) {
-    params.push(updates.role);
-    setClauses.push(`role = $${params.length}`);
-  }
-  if (updates.is_active !== undefined) {
-    params.push(updates.is_active);
-    setClauses.push(`is_active = $${params.length}`);
-  }
-  if (updates.password_hash !== undefined) {
-    params.push(updates.password_hash);
-    setClauses.push(`password_hash = $${params.length}`);
-  }
-  if (updates.password_lookup !== undefined) {
-    params.push(updates.password_lookup);
-    setClauses.push(`password_lookup = $${params.length}`);
-  }
-  if (updates.password_enc !== undefined) {
-    params.push(updates.password_enc);
-    setClauses.push(`password_enc = $${params.length}`);
-  }
-
-  if (setClauses.length === 0) {
+  if (Object.keys(patchData).length === 0) {
     const existing = await findUserById(id);
     if (!existing) throw new Error('User not found');
-    const { password_hash, password_lookup, password_enc, ...publicUser } = existing;
-    return publicUser;
+    return {
+      id: existing.id,
+      name: existing.name,
+      role: existing.role,
+      is_active: existing.is_active,
+      created_at: existing.created_at,
+    };
   }
 
-  const sql = `UPDATE portal_users SET ${setClauses.join(', ')} WHERE id = $1 RETURNING id, name, role, is_active, created_at`;
-  const res = await pool.query(sql, params);
-  if (res.rows.length === 0) {
-    throw new Error('User not found');
+  const { data, error } = await supabase
+    .from('portal_users')
+    .update(patchData)
+    .eq('id', id)
+    .select('id, name, role, is_active, created_at')
+    .single();
+
+  if (error) {
+    console.error('[DB_ERROR_UPDATE_USER]', { message: error.message, code: error.code });
+    throw error;
   }
-  return res.rows[0] as PortalUserPublic;
+  return data as PortalUserPublic;
 }
 
 export async function deleteUser(id: string): Promise<boolean> {
   const supabase = getSupabase();
-  if (supabase) {
-    const { error } = await supabase.from('portal_users').delete().eq('id', id);
-    if (error) {
-      console.error('[DB_ERROR_DELETE_USER]', { message: error.message, code: error.code });
-      throw error;
-    }
-    return true;
+  const { error } = await supabase.from('portal_users').delete().eq('id', id);
+  if (error) {
+    console.error('[DB_ERROR_DELETE_USER]', { message: error.message, code: error.code });
+    throw error;
   }
-
-  const pool = getPgPool();
-  const res = await pool.query('DELETE FROM portal_users WHERE id = $1', [id]);
-  return (res.rowCount ?? 0) > 0;
+  return true;
 }
 
 export async function getDashboardStats(): Promise<DashboardStats> {
   const supabase = getSupabase();
-  if (supabase) {
-    const { data, error } = await supabase
-      .from('portal_users')
-      .select('role, is_active');
+  const { data, error } = await supabase
+    .from('portal_users')
+    .select('role, is_active');
 
-    if (error) {
-      console.error('[DB_ERROR_STATS_SUPABASE]', { message: error.message, code: error.code });
-      throw new Error(`Supabase query failed: ${error.message}`);
-    }
-
-    const rows = data || [];
-    return {
-      totalUsers: rows.length,
-      distributors: rows.filter((r) => r.role === 'distributor').length,
-      staff: rows.filter((r) => r.role === 'zeesip_staff').length,
-      admins: rows.filter((r) => r.role === 'zeesip_admin').length,
-      activeUsers: rows.filter((r) => r.is_active).length,
-      inactiveUsers: rows.filter((r) => !r.is_active).length,
-    };
+  if (error) {
+    console.error('[DB_ERROR_STATS_SUPABASE]', { message: error.message, code: error.code });
+    throw new Error(`Supabase query failed: ${error.message}`);
   }
 
-  try {
-    const pool = getPgPool();
-    const res = await pool.query(`
-      SELECT
-        COUNT(*)::int as total,
-        COUNT(*) FILTER (WHERE role = 'distributor')::int as distributors,
-        COUNT(*) FILTER (WHERE role = 'zeesip_staff')::int as staff,
-        COUNT(*) FILTER (WHERE role = 'zeesip_admin')::int as admins,
-        COUNT(*) FILTER (WHERE is_active = true)::int as active,
-        COUNT(*) FILTER (WHERE is_active = false)::int as inactive
-      FROM portal_users;
-    `);
-
-    const row = res.rows[0];
-    return {
-      totalUsers: Number(row?.total || 0),
-      distributors: Number(row?.distributors || 0),
-      staff: Number(row?.staff || 0),
-      admins: Number(row?.admins || 0),
-      activeUsers: Number(row?.active || 0),
-      inactiveUsers: Number(row?.inactive || 0),
-    };
-  } catch (err) {
-    console.error('[DB_ERROR_STATS_PG]', { message: (err as Error).message });
-    throw err;
-  }
+  const rows = data || [];
+  return {
+    totalUsers: rows.length,
+    distributors: rows.filter((r) => r.role === 'distributor').length,
+    staff: rows.filter((r) => r.role === 'zeesip_staff').length,
+    admins: rows.filter((r) => r.role === 'zeesip_admin').length,
+    activeUsers: rows.filter((r) => r.is_active).length,
+    inactiveUsers: rows.filter((r) => !r.is_active).length,
+  };
 }
 
 // ==============================================================================
@@ -332,40 +198,22 @@ export async function listLocationsByDistributor(
   district?: string
 ): Promise<DeliveredLocation[]> {
   const supabase = getSupabase();
-  if (supabase) {
-    let query = supabase
-      .from('delivered_locations')
-      .select('*')
-      .eq('distributor_id', distributorId)
-      .order('created_at', { ascending: false });
-
-    if (district && district !== 'all') {
-      query = query.eq('district', district);
-    }
-
-    const { data, error } = await query;
-    if (error) {
-      console.error('[DB_ERROR_LIST_LOCATIONS]', { message: error.message, code: error.code });
-      throw error;
-    }
-    return (data || []) as DeliveredLocation[];
-  }
-
-  const pool = getPgPool();
-  const conditions = ['distributor_id = $1'];
-  const params: unknown[] = [distributorId];
+  let query = supabase
+    .from('delivered_locations')
+    .select('*')
+    .eq('distributor_id', distributorId)
+    .order('created_at', { ascending: false });
 
   if (district && district !== 'all') {
-    params.push(district);
-    conditions.push(`district = $${params.length}`);
+    query = query.eq('district', district);
   }
 
-  const sql = `SELECT id, distributor_id, district, location, details, created_at 
-               FROM delivered_locations 
-               WHERE ${conditions.join(' AND ')} 
-               ORDER BY created_at DESC`;
-  const res = await pool.query(sql, params);
-  return res.rows as DeliveredLocation[];
+  const { data, error } = await query;
+  if (error) {
+    console.error('[DB_ERROR_LIST_LOCATIONS]', { message: error.message, code: error.code });
+    throw error;
+  }
+  return (data || []) as DeliveredLocation[];
 }
 
 export async function createLocation(data: {
@@ -375,114 +223,132 @@ export async function createLocation(data: {
   details?: string | null;
 }): Promise<DeliveredLocation> {
   const supabase = getSupabase();
-  if (supabase) {
-    const { data: created, error } = await supabase
-      .from('delivered_locations')
-      .insert({
-        distributor_id: data.distributor_id,
-        district: data.district,
-        location: data.location.trim(),
-        details: data.details ? data.details.trim() : null,
-      })
-      .select('*')
-      .single();
+  const { data: created, error } = await supabase
+    .from('delivered_locations')
+    .insert({
+      distributor_id: data.distributor_id,
+      district: data.district,
+      location: data.location.trim(),
+      details: data.details ? data.details.trim() : null,
+    })
+    .select('*')
+    .single();
 
-    if (error) {
-      console.error('[DB_ERROR_CREATE_LOCATION]', { message: error.message, code: error.code });
-      throw error;
-    }
-    return created as DeliveredLocation;
+  if (error) {
+    console.error('[DB_ERROR_CREATE_LOCATION]', { message: error.message, code: error.code });
+    throw error;
   }
-
-  const pool = getPgPool();
-  const sql = `INSERT INTO delivered_locations (distributor_id, district, location, details)
-               VALUES ($1, $2, $3, $4)
-               RETURNING id, distributor_id, district, location, details, created_at`;
-  const res = await pool.query(sql, [
-    data.distributor_id,
-    data.district,
-    data.location.trim(),
-    data.details ? data.details.trim() : null,
-  ]);
-  return res.rows[0] as DeliveredLocation;
+  return created as DeliveredLocation;
 }
 
 export async function deleteLocation(id: string, distributorId: string): Promise<boolean> {
   const supabase = getSupabase();
-  if (supabase) {
-    const { error } = await supabase
-      .from('delivered_locations')
-      .delete()
-      .eq('id', id)
-      .eq('distributor_id', distributorId);
+  const { error } = await supabase
+    .from('delivered_locations')
+    .delete()
+    .eq('id', id)
+    .eq('distributor_id', distributorId);
 
-    if (error) {
-      console.error('[DB_ERROR_DELETE_LOCATION]', { message: error.message, code: error.code });
-      throw error;
-    }
-    return true;
+  if (error) {
+    console.error('[DB_ERROR_DELETE_LOCATION]', { message: error.message, code: error.code });
+    throw error;
   }
-
-  const pool = getPgPool();
-  const res = await pool.query(
-    'DELETE FROM delivered_locations WHERE id = $1 AND distributor_id = $2',
-    [id, distributorId]
-  );
-  return (res.rowCount ?? 0) > 0;
+  return true;
 }
 
 export async function listDistributorsDeliverySummary(
   search?: string
 ): Promise<DistributorDeliverySummary[]> {
-  const pool = getPgPool();
-  const conditions = ["u.role = 'distributor'"];
-  const params: unknown[] = [];
+  const supabase = getSupabase();
+
+  // 1. Fetch users with role 'distributor'
+  let userQuery = supabase
+    .from('portal_users')
+    .select('id, name, role, is_active')
+    .eq('role', 'distributor')
+    .order('name', { ascending: true });
 
   if (search && search.trim().length > 0) {
-    params.push(`%${search.trim()}%`);
-    conditions.push(`u.name ILIKE $${params.length}`);
+    userQuery = userQuery.ilike('name', `%${search.trim()}%`);
   }
 
-  const sql = `
-    SELECT
-      u.id,
-      u.name,
-      u.role,
-      u.is_active,
-      COUNT(dl.id)::int as total_deliveries,
-      MAX(dl.created_at) as last_delivery_at
-    FROM portal_users u
-    LEFT JOIN delivered_locations dl ON dl.distributor_id = u.id
-    WHERE ${conditions.join(' AND ')}
-    GROUP BY u.id, u.name, u.role, u.is_active
-    ORDER BY total_deliveries DESC, u.name ASC;
-  `;
+  const { data: distributors, error: userError } = await userQuery;
+  if (userError) {
+    console.error('[DB_ERROR_LIST_DISTRIBUTORS]', { message: userError.message, code: userError.code });
+    throw userError;
+  }
 
-  const res = await pool.query(sql, params);
-  return res.rows as DistributorDeliverySummary[];
+  if (!distributors || distributors.length === 0) {
+    return [];
+  }
+
+  const distributorIds = distributors.map((d) => d.id);
+
+  // 2. Fetch delivered_locations rows for these distributors (only needed columns)
+  const { data: locations, error: locError } = await supabase
+    .from('delivered_locations')
+    .select('distributor_id, created_at')
+    .in('distributor_id', distributorIds);
+
+  if (locError) {
+    console.error('[DB_ERROR_LIST_DISTRIBUTOR_LOCS]', { message: locError.message, code: locError.code });
+    throw locError;
+  }
+
+  // 3. Aggregate in-memory
+  const counts: Record<string, number> = {};
+  const lastDates: Record<string, string> = {};
+
+  for (const loc of locations || []) {
+    const dId = loc.distributor_id;
+    counts[dId] = (counts[dId] || 0) + 1;
+    if (!lastDates[dId] || new Date(loc.created_at) > new Date(lastDates[dId])) {
+      lastDates[dId] = loc.created_at;
+    }
+  }
+
+  const summary: DistributorDeliverySummary[] = distributors.map((d) => ({
+    id: d.id,
+    name: d.name,
+    role: d.role,
+    is_active: d.is_active,
+    total_deliveries: counts[d.id] || 0,
+    last_delivery_at: lastDates[d.id] || null,
+  }));
+
+  // Sort by total_deliveries DESC, then name ASC
+  summary.sort((a, b) => {
+    if (b.total_deliveries !== a.total_deliveries) {
+      return b.total_deliveries - a.total_deliveries;
+    }
+    return a.name.localeCompare(b.name);
+  });
+
+  return summary;
 }
 
 export async function getDistributorDeliveryStats(
   distributorId: string
 ): Promise<{ total: number; by_district: Record<string, number>; byDistrict: Record<string, number> }> {
-  const pool = getPgPool();
-  const sql = `
-    SELECT
-      district,
-      COUNT(*)::int as count
-    FROM delivered_locations
-    WHERE distributor_id = $1
-    GROUP BY district
-    ORDER BY count DESC;
-  `;
+  const supabase = getSupabase();
 
-  const res = await pool.query(sql, [distributorId]);
+  const { data, error } = await supabase
+    .from('delivered_locations')
+    .select('district')
+    .eq('distributor_id', distributorId);
+
+  if (error) {
+    console.error('[DB_ERROR_DISTRIBUTOR_STATS]', { message: error.message, code: error.code });
+    throw error;
+  }
+
   const byDistrict: Record<string, number> = {};
   let total = 0;
 
-  for (const row of res.rows) {
-    byDistrict[row.district] = Number(row.count);
-    total += Number(row.count);
+  for (const row of data || []) {
+    const dist = row.district;
+    byDistrict[dist] = (byDistrict[dist] || 0) + 1;
+    total += 1;
   }
 
   return { total, by_district: byDistrict, byDistrict };
