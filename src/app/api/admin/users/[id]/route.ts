@@ -2,26 +2,33 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { updateUser, deleteUser, findUserById, findUserByPasswordLookup } from '@/lib/db';
 import { verifySessionToken, computePasswordLookup, constantTimeCompare, SESSION_COOKIE_NAME } from '@/lib/auth';
+import { SessionPayload } from '@/lib/types';
 
-async function verifyAdminAuth(request: NextRequest): Promise<boolean> {
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function getAdminSession(request: NextRequest): Promise<SessionPayload | null> {
   const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
-  if (!token) return false;
+  if (!token) return null;
   const session = await verifySessionToken(token);
-  return session?.role === 'admin' || session?.role === 'zeesip_admin';
+  if (!session || (session.role !== 'admin' && session.role !== 'zeesip_admin')) {
+    return null;
+  }
+  return session;
 }
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!(await verifyAdminAuth(request))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const adminSession = await getAdminSession(request);
+  if (!adminSession) {
+    return NextResponse.json({ error: 'Unauthorized: Admin access required' }, { status: 401 });
   }
 
   try {
     const { id } = await params;
-    if (!id) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+    if (!id || !UUID_REGEX.test(id)) {
+      return NextResponse.json({ error: 'Invalid user ID format' }, { status: 400 });
     }
 
     const existing = await findUserById(id);
@@ -38,16 +45,29 @@ export async function PATCH(
       password_lookup?: string;
     } = {};
 
+    // Prevent an admin from deactivating their own account
+    if (body.is_active === false && adminSession.userId === id) {
+      return NextResponse.json(
+        { error: 'You cannot deactivate your own account.' },
+        { status: 400 }
+      );
+    }
+
     if (body.name !== undefined) {
-      if (!body.name.trim()) {
-        return NextResponse.json({ error: 'Name cannot be empty' }, { status: 400 });
+      const cleanName = String(body.name).trim();
+      if (!cleanName || cleanName.length > 100) {
+        return NextResponse.json({ error: 'Name must be between 1 and 100 characters' }, { status: 400 });
       }
-      updates.name = body.name.trim();
+      updates.name = cleanName;
     }
 
     if (body.role !== undefined) {
       if (!['distributor', 'zeesip_staff', 'zeesip_admin'].includes(body.role)) {
         return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
+      }
+      // Prevent an admin from demoting their own role
+      if (adminSession.userId === id && body.role !== 'admin' && body.role !== 'zeesip_admin') {
+        return NextResponse.json({ error: 'You cannot remove your own admin status.' }, { status: 400 });
       }
       updates.role = body.role;
     }
@@ -57,12 +77,15 @@ export async function PATCH(
     }
 
     if (body.password !== undefined && body.password.trim() !== '') {
-      const trimmed = body.password.trim();
+      const trimmed = String(body.password).trim();
       if (trimmed.length < 8) {
         return NextResponse.json({ error: 'Password must be at least 8 characters long' }, { status: 400 });
       }
+      if (trimmed.length > 128) {
+        return NextResponse.json({ error: 'Password must not exceed 128 characters' }, { status: 400 });
+      }
 
-      // Check against ADMIN_PASSWORD
+      // Check against master ADMIN_PASSWORD
       const adminPassword = (process.env.ADMIN_PASSWORD || '').trim();
       if (adminPassword && constantTimeCompare(trimmed, adminPassword)) {
         return NextResponse.json({ error: 'This password is already in use. Choose another.' }, { status: 400 });
@@ -92,14 +115,23 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!(await verifyAdminAuth(request))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const adminSession = await getAdminSession(request);
+  if (!adminSession) {
+    return NextResponse.json({ error: 'Unauthorized: Admin access required' }, { status: 401 });
   }
 
   try {
     const { id } = await params;
-    if (!id) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+    if (!id || !UUID_REGEX.test(id)) {
+      return NextResponse.json({ error: 'Invalid user ID format' }, { status: 400 });
+    }
+
+    // Prevent an admin from deleting their own account
+    if (adminSession.userId === id) {
+      return NextResponse.json(
+        { error: 'You cannot delete your own account.' },
+        { status: 400 }
+      );
     }
 
     const existing = await findUserById(id);

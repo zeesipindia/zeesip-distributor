@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/jwt';
+import { findUserById } from '@/lib/db';
 import { Logo } from '@/components/ui/Logo';
 import { LogOut, Package, ShoppingBag, Truck } from 'lucide-react';
 
@@ -17,9 +18,15 @@ export default async function DashboardPage() {
     redirect('/');
   }
 
-  // If admin lands on /dashboard, redirect to admin
+  // If master or staff admin lands on /dashboard, redirect to admin dashboard
   if (session.role === 'admin' || session.role === 'zeesip_admin') {
     redirect('/admin/dashboard');
+  }
+
+  // Verify that the user is still active in the database (prevent deactivated users from accessing)
+  const user = await findUserById(session.userId);
+  if (!user || !user.is_active) {
+    redirect('/api/auth/logout');
   }
 
   const roleLabel = session.role === 'distributor' ? 'Distributor' : 'Zee Sip staff';
@@ -33,7 +40,7 @@ export default async function DashboardPage() {
 
           <div className="flex items-center gap-4">
             <div className="text-right">
-              <span className="text-xs font-medium text-black block">{session.name}</span>
+              <span className="text-xs font-medium text-black block">{user.name}</span>
               <span className="text-[11px] text-[#555555]">{roleLabel}</span>
             </div>
 
@@ -58,7 +65,7 @@ export default async function DashboardPage() {
             {roleLabel}
           </div>
           <h1 className="text-xl font-semibold text-black tracking-tight">
-            Welcome, {session.name}
+            Welcome, {user.name}
           </h1>
           <p className="mt-1 text-xs text-[#555555]">
             Signed in to the Zee Sip portal.

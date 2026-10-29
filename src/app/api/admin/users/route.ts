@@ -12,15 +12,19 @@ async function verifyAdminAuth(request: NextRequest): Promise<boolean> {
 
 export async function GET(request: NextRequest) {
   if (!(await verifyAdminAuth(request))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized: Admin access required' }, { status: 401 });
   }
 
   try {
     const { searchParams } = new URL(request.url);
-    const search = searchParams.get('search') || undefined;
+    const search = searchParams.get('search') ? searchParams.get('search')?.slice(0, 100) : undefined;
     const role = searchParams.get('role') || undefined;
 
-    const users = await listUsers({ search, role });
+    // Strict role validation
+    const validRoles = ['distributor', 'zeesip_staff', 'zeesip_admin'];
+    const filteredRole = role && validRoles.includes(role) ? role : undefined;
+
+    const users = await listUsers({ search, role: filteredRole });
     return NextResponse.json({ users });
   } catch (error) {
     console.error('Error listing users:', error);
@@ -30,7 +34,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   if (!(await verifyAdminAuth(request))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized: Admin access required' }, { status: 401 });
   }
 
   try {
@@ -38,19 +42,28 @@ export async function POST(request: NextRequest) {
     const { name, role, password } = body;
 
     // Validate inputs
-    if (!name || !name.trim()) {
-      return NextResponse.json({ error: 'Full name is required' }, { status: 400 });
+    const cleanName = String(name || '').trim();
+    if (!cleanName || cleanName.length > 100) {
+      return NextResponse.json({ error: 'Full name is required (max 100 characters)' }, { status: 400 });
     }
+
     if (!role || !['distributor', 'zeesip_staff', 'zeesip_admin'].includes(role)) {
       return NextResponse.json({ error: 'Invalid user type' }, { status: 400 });
     }
-    if (!password || typeof password !== 'string' || password.trim().length < 8) {
-      return NextResponse.json({ error: 'Password must be at least 8 characters long' }, { status: 400 });
+
+    if (!password || typeof password !== 'string') {
+      return NextResponse.json({ error: 'Password is required' }, { status: 400 });
     }
 
     const trimmedPassword = password.trim();
+    if (trimmedPassword.length < 8) {
+      return NextResponse.json({ error: 'Password must be at least 8 characters long' }, { status: 400 });
+    }
+    if (trimmedPassword.length > 128) {
+      return NextResponse.json({ error: 'Password must not exceed 128 characters' }, { status: 400 });
+    }
 
-    // Check against ADMIN_PASSWORD
+    // Check against master ADMIN_PASSWORD
     const adminPassword = (process.env.ADMIN_PASSWORD || '').trim();
     if (adminPassword && constantTimeCompare(trimmedPassword, adminPassword)) {
       return NextResponse.json(
@@ -59,7 +72,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check unique password across all users via password_lookup
+    // Check unique password across all users via HMAC lookup
     const password_lookup = computePasswordLookup(trimmedPassword);
     const existing = await findUserByPasswordLookup(password_lookup);
     if (existing) {
@@ -69,12 +82,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Hash password with bcrypt
+    // Hash password with bcrypt (10 salt rounds)
     const salt = await bcrypt.genSalt(10);
     const password_hash = await bcrypt.hash(trimmedPassword, salt);
 
     const newUser = await createUser({
-      name: name.trim(),
+      name: cleanName,
       role,
       password_hash,
       password_lookup,
