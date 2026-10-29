@@ -18,8 +18,8 @@ export default async function DashboardPage() {
   }
 
   // If admin lands on /dashboard, redirect to admin
-  if (session.role === 'admin') {
-    redirect('/admin/users');
+  if (session.role === 'admin' || session.role === 'zeesip_admin') {
+    redirect('/admin/dashboard');
   }
 
   const roleLabel = session.role === 'distributor' ? 'Distributor' : 'Zee Sip staff';
@@ -34,7 +34,7 @@ export default async function DashboardPage() {
           <div className="flex items-center gap-4">
             <div className="text-right">
               <span className="text-xs font-medium text-black block">{session.name}</span>
-              <span className="text-[11px] text-[#555555]">@{session.username}</span>
+              <span className="text-[11px] text-[#555555]">{roleLabel}</span>
             </div>
 
             <form action="/api/auth/logout" method="POST">

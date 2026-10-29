@@ -42,7 +42,6 @@ export async function verifySessionToken(token: string): Promise<SessionPayload 
       userId: String(payload.userId),
       role: payload.role as SessionPayload['role'],
       name: String(payload.name || ''),
-      username: String(payload.username || ''),
     };
   } catch {
     return null;

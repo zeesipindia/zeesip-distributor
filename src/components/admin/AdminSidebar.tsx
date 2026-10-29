@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Users, Package, ShoppingBag, Truck, BarChart3, Settings, X } from 'lucide-react';
+import { LayoutDashboard, Users, Package, ShoppingBag, Truck, BarChart3, Settings, X } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
 
 interface NavItem {
@@ -14,6 +14,7 @@ interface NavItem {
 }
 
 export const ADMIN_MODULES: NavItem[] = [
+  { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard, isReady: true },
   { name: 'Users', href: '/admin/users', icon: Users, isReady: true },
   { name: 'Products', href: '/admin/products', icon: Package, isReady: false },
   { name: 'Orders', href: '/admin/orders', icon: ShoppingBag, isReady: false },
@@ -35,14 +36,14 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
       {/* Mobile backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/20 backdrop-blur-none lg:hidden"
+          className="fixed inset-0 z-40 bg-black/20 lg:hidden"
           onClick={onClose}
         />
       )}
 
       {/* Sidebar container */}
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-50 w-64 bg-white border-r border-[#E5E5E5] flex flex-col transition-transform duration-200 ease-in-out lg:translate-x-0 ${
+        className={`fixed top-0 bottom-0 left-0 z-50 w-60 bg-white border-r border-[#E5E5E5] flex flex-col transition-transform duration-200 ease-in-out lg:translate-x-0 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -60,12 +61,12 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
         {/* Navigation */}
         <div className="flex-1 overflow-y-auto px-3 py-4 space-y-4">
           <div>
-            <div className="px-2 mb-2 text-[11px] font-medium uppercase tracking-wider text-[#737373]">
-              Modules
+            <div className="px-2.5 mb-2 text-[11px] font-medium uppercase tracking-wider text-[#737373]">
+              Menu
             </div>
-            <nav className="space-y-1">
+            <nav className="space-y-0.5">
               {ADMIN_MODULES.map((item) => {
-                const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+                const isActive = pathname === item.href || (item.href !== '/admin/dashboard' && pathname.startsWith(item.href + '/'));
                 const Icon = item.icon;
 
                 if (!item.isReady) {

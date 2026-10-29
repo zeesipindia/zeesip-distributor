@@ -39,6 +39,19 @@ export function UserTable({
     }
   };
 
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case 'distributor':
+        return 'Distributor';
+      case 'zeesip_staff':
+        return 'Zee Sip Staff';
+      case 'zeesip_admin':
+        return 'Zee Sip Admin';
+      default:
+        return role;
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="bg-white rounded-[8px] border border-[#E5E5E5] p-10 flex flex-col items-center justify-center text-[#555555]">
@@ -65,7 +78,7 @@ export function UserTable({
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-neutral-50 border-b border-[#E5E5E5] text-[11px] font-medium uppercase tracking-wider text-[#555555]">
-              <th className="py-2.5 px-4">User</th>
+              <th className="py-2.5 px-4">Name</th>
               <th className="py-2.5 px-4">Type</th>
               <th className="py-2.5 px-4">Status</th>
               <th className="py-2.5 px-4 hidden md:table-cell">Created</th>
@@ -74,7 +87,6 @@ export function UserTable({
           </thead>
           <tbody className="divide-y divide-[#E5E5E5] text-xs">
             {users.map((user) => {
-              const isDistributor = user.role === 'distributor';
               const isBusy = togglingId === user.id;
 
               return (
@@ -82,21 +94,14 @@ export function UserTable({
                   key={user.id}
                   className="hover:bg-neutral-50/60 transition-colors"
                 >
-                  {/* Name and username */}
-                  <td className="py-3 px-4">
-                    <div className="font-medium text-black">
-                      {user.name}
-                    </div>
-                    <div className="text-[#555555] font-mono text-[11px] mt-0.5">
-                      @{user.username}
-                    </div>
+                  {/* Name */}
+                  <td className="py-3 px-4 font-medium text-black">
+                    {user.name}
                   </td>
 
                   {/* Role Type */}
-                  <td className="py-3 px-4">
-                    <span className="text-xs text-black">
-                      {isDistributor ? 'Distributor' : 'Zee Sip staff'}
-                    </span>
+                  <td className="py-3 px-4 text-xs text-black">
+                    {getRoleLabel(user.role)}
                   </td>
 
                   {/* Status Badge */}
@@ -139,17 +144,17 @@ export function UserTable({
                       <button
                         type="button"
                         onClick={() => onEdit(user)}
-                        title="Edit user"
+                        title="Edit name/type"
                         className="p-1 rounded-[4px] border border-[#E5E5E5] bg-white text-[#555555] hover:text-black hover:bg-neutral-50 transition-colors"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
 
-                      {/* Reset Password */}
+                      {/* Change Password */}
                       <button
                         type="button"
                         onClick={() => onResetPassword(user)}
-                        title="Reset password"
+                        title="Change password"
                         className="p-1 rounded-[4px] border border-[#E5E5E5] bg-white text-[#555555] hover:text-black hover:bg-neutral-50 transition-colors"
                       >
                         <KeyRound className="w-3.5 h-3.5" />

@@ -59,7 +59,7 @@ export function DeleteUserModal({ isOpen, user, onClose, onUserDeleted }: Delete
         )}
 
         <p className="text-xs text-[#555555]">
-          Are you sure you want to delete <strong className="text-black">{user.name}</strong> (@{user.username})?
+          Are you sure you want to delete <strong className="text-black">{user.name}</strong>?
         </p>
 
         <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#E5E5E5]">

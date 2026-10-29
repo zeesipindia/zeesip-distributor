@@ -14,7 +14,7 @@ interface EditUserModalProps {
 
 export function EditUserModal({ isOpen, user, onClose, onUserUpdated }: EditUserModalProps) {
   const [name, setName] = useState('');
-  const [role, setRole] = useState<'distributor' | 'zeesip_staff'>('distributor');
+  const [role, setRole] = useState<'distributor' | 'zeesip_staff' | 'zeesip_admin'>('distributor');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -66,7 +66,7 @@ export function EditUserModal({ isOpen, user, onClose, onUserUpdated }: EditUser
       isOpen={isOpen}
       onClose={onClose}
       title="Edit User"
-      description={`Update account details for @${user.username}`}
+      description="Update name or type"
       maxWidth="md"
     >
       <form onSubmit={handleSubmit} className="space-y-3.5">
@@ -75,18 +75,6 @@ export function EditUserModal({ isOpen, user, onClose, onUserUpdated }: EditUser
             {error}
           </div>
         )}
-
-        <div>
-          <label className="block text-xs font-medium text-black mb-1">
-            Username
-          </label>
-          <input
-            type="text"
-            value={user.username}
-            disabled
-            className="w-full px-3 py-1.5 bg-neutral-100 border border-[#E5E5E5] rounded-[8px] text-xs font-mono text-[#737373] cursor-not-allowed"
-          />
-        </div>
 
         <div>
           <label className="block text-xs font-medium text-black mb-1">
@@ -103,15 +91,16 @@ export function EditUserModal({ isOpen, user, onClose, onUserUpdated }: EditUser
 
         <div>
           <label className="block text-xs font-medium text-black mb-1">
-            Type
+            User Type
           </label>
           <select
             value={role}
-            onChange={(e) => setRole(e.target.value as 'distributor' | 'zeesip_staff')}
+            onChange={(e) => setRole(e.target.value as 'distributor' | 'zeesip_staff' | 'zeesip_admin')}
             className="w-full px-3 py-1.5 bg-white border border-[#D4D4D4] rounded-[8px] text-xs text-black focus:outline-none focus:border-black"
           >
             <option value="distributor">Distributor</option>
-            <option value="zeesip_staff">Zee Sip staff</option>
+            <option value="zeesip_staff">Zee Sip Staff</option>
+            <option value="zeesip_admin">Zee Sip Admin</option>
           </select>
         </div>
 

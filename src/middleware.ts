@@ -8,9 +8,7 @@ export async function middleware(request: NextRequest) {
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon.ico') ||
-    pathname.startsWith('/logo.png') ||
-    pathname.startsWith('/api/auth/login-admin') ||
-    pathname.startsWith('/api/auth/login-user') ||
+    pathname.startsWith('/api/auth/login') ||
     pathname.startsWith('/api/auth/logout')
   ) {
     return NextResponse.next();
@@ -20,23 +18,24 @@ export async function middleware(request: NextRequest) {
   const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME)?.value;
   const session = sessionCookie ? await verifySessionToken(sessionCookie) : null;
 
+  const isAdminRole = session?.role === 'admin' || session?.role === 'zeesip_admin';
+
   // 3. Handle landing page "/"
   if (pathname === '/') {
     if (session) {
-      if (session.role === 'admin') {
-        return NextResponse.redirect(new URL('/admin/users', request.url));
+      if (isAdminRole) {
+        return NextResponse.redirect(new URL('/admin/dashboard', request.url));
       } else {
         return NextResponse.redirect(new URL('/dashboard', request.url));
       }
     }
-    // Unauthenticated user at landing page -> proceed to login screen
     return NextResponse.next();
   }
 
   // 4. API routes protection
   if (pathname.startsWith('/api/admin')) {
-    if (!session || session.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized: Admin privileges required' }, { status: 401 });
+    if (!session || !isAdminRole) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     return NextResponse.next();
   }
@@ -49,8 +48,7 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
-    if (session.role !== 'admin') {
-      // Non-admin user trying to access admin area -> redirect to user dashboard
+    if (!isAdminRole) {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
 
@@ -65,15 +63,14 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
-    // If admin lands on /dashboard, redirect to admin users
-    if (session.role === 'admin') {
-      return NextResponse.redirect(new URL('/admin/users', request.url));
+    if (isAdminRole) {
+      return NextResponse.redirect(new URL('/admin/dashboard', request.url));
     }
 
     return NextResponse.next();
   }
 
-  // 7. Any other protected route requires authentication
+  // 7. Protected route fallback
   if (!session) {
     const loginUrl = new URL('/', request.url);
     loginUrl.searchParams.set('redirect', pathname);
@@ -85,12 +82,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
     '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 };

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { PortalUserPublic } from '@/lib/types';
 import { UserTable } from '@/components/admin/UserTable';
 import { AddUserModal } from '@/components/admin/AddUserModal';
@@ -15,7 +15,7 @@ export default function UsersAdminPage() {
 
   // Filter and search
   const [searchQuery, setSearchQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState<'all' | 'distributor' | 'zeesip_staff'>('all');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'distributor' | 'zeesip_staff' | 'zeesip_admin'>('all');
 
   // Modals state
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -50,15 +50,6 @@ export default function UsersAdminPage() {
     }, 200);
     return () => clearTimeout(timer);
   }, [loadUsers]);
-
-  // Summary counts
-  const stats = useMemo(() => {
-    const total = users.length;
-    const distributors = users.filter((u) => u.role === 'distributor').length;
-    const staff = users.filter((u) => u.role === 'zeesip_staff').length;
-    const active = users.filter((u) => u.is_active).length;
-    return { total, distributors, staff, active };
-  }, [users]);
 
   // Handlers
   const handleUserAdded = (newUser: PortalUserPublic) => {
@@ -122,29 +113,6 @@ export default function UsersAdminPage() {
         </div>
       </div>
 
-      {/* Metrics Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-white p-3.5 rounded-[8px] border border-[#E5E5E5]">
-          <span className="text-[11px] text-[#555555] font-normal block">Total</span>
-          <div className="text-lg font-semibold text-black mt-1">{stats.total}</div>
-        </div>
-
-        <div className="bg-white p-3.5 rounded-[8px] border border-[#E5E5E5]">
-          <span className="text-[11px] text-[#555555] font-normal block">Distributors</span>
-          <div className="text-lg font-semibold text-black mt-1">{stats.distributors}</div>
-        </div>
-
-        <div className="bg-white p-3.5 rounded-[8px] border border-[#E5E5E5]">
-          <span className="text-[11px] text-[#555555] font-normal block">Zee Sip staff</span>
-          <div className="text-lg font-semibold text-black mt-1">{stats.staff}</div>
-        </div>
-
-        <div className="bg-white p-3.5 rounded-[8px] border border-[#E5E5E5]">
-          <span className="text-[11px] text-[#555555] font-normal block">Active</span>
-          <div className="text-lg font-semibold text-black mt-1">{stats.active}</div>
-        </div>
-      </div>
-
       {/* Search and Filters */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         {/* Search */}
@@ -154,17 +122,17 @@ export default function UsersAdminPage() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by name or username..."
+            placeholder="Search by name..."
             className="w-full pl-8 pr-3 py-1.5 bg-white border border-[#D4D4D4] rounded-[8px] text-xs text-black placeholder-[#A3A3A3] focus:outline-none focus:border-black transition-colors"
           />
         </div>
 
         {/* Filter */}
-        <div className="flex items-center gap-1 border-b sm:border border-[#E5E5E5] sm:rounded-[8px] p-0.5">
+        <div className="flex items-center gap-1 border border-[#E5E5E5] rounded-[8px] p-0.5 overflow-x-auto">
           <button
             type="button"
             onClick={() => setRoleFilter('all')}
-            className={`px-2.5 py-1 text-xs transition-colors rounded-[6px] ${
+            className={`px-2.5 py-1 text-xs transition-colors rounded-[6px] whitespace-nowrap ${
               roleFilter === 'all'
                 ? 'bg-neutral-100 text-black font-medium'
                 : 'text-[#555555] hover:text-black'
@@ -175,7 +143,7 @@ export default function UsersAdminPage() {
           <button
             type="button"
             onClick={() => setRoleFilter('distributor')}
-            className={`px-2.5 py-1 text-xs transition-colors rounded-[6px] ${
+            className={`px-2.5 py-1 text-xs transition-colors rounded-[6px] whitespace-nowrap ${
               roleFilter === 'distributor'
                 ? 'bg-neutral-100 text-black font-medium'
                 : 'text-[#555555] hover:text-black'
@@ -186,13 +154,24 @@ export default function UsersAdminPage() {
           <button
             type="button"
             onClick={() => setRoleFilter('zeesip_staff')}
-            className={`px-2.5 py-1 text-xs transition-colors rounded-[6px] ${
+            className={`px-2.5 py-1 text-xs transition-colors rounded-[6px] whitespace-nowrap ${
               roleFilter === 'zeesip_staff'
                 ? 'bg-neutral-100 text-black font-medium'
                 : 'text-[#555555] hover:text-black'
             }`}
           >
-            Zee Sip staff
+            Zee Sip Staff
+          </button>
+          <button
+            type="button"
+            onClick={() => setRoleFilter('zeesip_admin')}
+            className={`px-2.5 py-1 text-xs transition-colors rounded-[6px] whitespace-nowrap ${
+              roleFilter === 'zeesip_admin'
+                ? 'bg-neutral-100 text-black font-medium'
+                : 'text-[#555555] hover:text-black'
+            }`}
+          >
+            Zee Sip Admin
           </button>
         </div>
       </div>
