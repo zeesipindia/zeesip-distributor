@@ -1,6 +1,8 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { SessionPayload } from './types';
 
+export type { SessionPayload } from './types';
+
 export const SESSION_COOKIE_NAME = 'zeesip_session';
 export const SESSION_EXPIRY = '7d';
 

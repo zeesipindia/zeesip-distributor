@@ -9,6 +9,10 @@ import {
   Trash2,
   Power,
   Loader2,
+  Eye,
+  EyeOff,
+  Copy,
+  Check,
 } from 'lucide-react';
 
 interface UserTableProps {
@@ -29,6 +33,8 @@ export function UserTable({
   onToggleStatus,
 }: UserTableProps) {
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [revealedIds, setRevealedIds] = useState<Record<string, boolean>>({});
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const handleToggle = async (user: PortalUserPublic) => {
     setTogglingId(user.id);
@@ -37,6 +43,21 @@ export function UserTable({
     } finally {
       setTogglingId(null);
     }
+  };
+
+  const toggleReveal = (id: string) => {
+    setRevealedIds((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
+
+  const handleCopy = (id: string, passwordText: string) => {
+    navigator.clipboard.writeText(passwordText);
+    setCopiedId(id);
+    setTimeout(() => {
+      setCopiedId((current) => (current === id ? null : current));
+    }, 2000);
   };
 
   const getRoleLabel = (role: string) => {
@@ -80,6 +101,7 @@ export function UserTable({
             <tr className="bg-neutral-50 border-b border-[#E5E5E5] text-[11px] font-medium uppercase tracking-wider text-[#555555]">
               <th className="py-2.5 px-4">Name</th>
               <th className="py-2.5 px-4">Type</th>
+              <th className="py-2.5 px-4">Password</th>
               <th className="py-2.5 px-4">Status</th>
               <th className="py-2.5 px-4 hidden md:table-cell">Created</th>
               <th className="py-2.5 px-4 text-right">Actions</th>
@@ -88,6 +110,8 @@ export function UserTable({
           <tbody className="divide-y divide-[#E5E5E5] text-xs">
             {users.map((user) => {
               const isBusy = togglingId === user.id;
+              const isRevealed = Boolean(revealedIds[user.id]);
+              const isCopied = copiedId === user.id;
 
               return (
                 <tr
@@ -102,6 +126,44 @@ export function UserTable({
                   {/* Role Type */}
                   <td className="py-3 px-4 text-xs text-black">
                     {getRoleLabel(user.role)}
+                  </td>
+
+                  {/* Password Column */}
+                  <td className="py-3 px-4">
+                    {user.password ? (
+                      <div className="inline-flex items-center gap-2">
+                        <span className="font-mono text-xs select-all text-black">
+                          {isRevealed ? user.password : '••••••••'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => toggleReveal(user.id)}
+                          className="p-1 rounded text-[#555555] hover:text-black hover:bg-neutral-100 transition-colors"
+                          title={isRevealed ? 'Hide' : 'Reveal'}
+                        >
+                          {isRevealed ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(user.id, user.password!)}
+                          className="p-1 rounded text-[#555555] hover:text-black hover:bg-neutral-100 transition-colors inline-flex items-center gap-1"
+                          title="Copy password"
+                        >
+                          {isCopied ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-green-600" />
+                              <span className="text-[10px] text-green-700 font-medium">Copied</span>
+                            </>
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-[#737373] italic">
+                        Not saved
+                      </span>
+                    )}
                   </td>
 
                   {/* Status Badge */}

@@ -22,7 +22,8 @@ export async function GET(request: NextRequest) {
     const stats = await getDashboardStats();
     return NextResponse.json({ stats });
   } catch (error) {
-    console.error('Error fetching dashboard stats:', error);
-    return NextResponse.json({ error: 'Failed to fetch statistics' }, { status: 500 });
+    const errMsg = (error as Error).message || 'Failed to fetch statistics';
+    console.error('[ADMIN_STATS_API_ERROR]', { message: errMsg });
+    return NextResponse.json({ error: errMsg }, { status: 500 });
   }
 }

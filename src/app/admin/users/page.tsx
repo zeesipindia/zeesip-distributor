@@ -57,7 +57,7 @@ export default function UsersAdminPage() {
   };
 
   const handleUserUpdated = (updatedUser: PortalUserPublic) => {
-    setUsers((prev) => prev.map((u) => (u.id === updatedUser.id ? updatedUser : u)));
+    setUsers((prev) => prev.map((u) => (u.id === updatedUser.id ? { ...u, ...updatedUser } : u)));
   };
 
   const handleUserDeleted = (deletedId: string) => {
@@ -204,6 +204,7 @@ export default function UsersAdminPage() {
         isOpen={Boolean(resettingUser)}
         user={resettingUser}
         onClose={() => setResettingUser(null)}
+        onUserUpdated={handleUserUpdated}
       />
 
       <DeleteUserModal

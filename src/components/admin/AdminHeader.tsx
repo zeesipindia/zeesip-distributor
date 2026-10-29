@@ -2,20 +2,15 @@
 
 import React from 'react';
 import { Menu, LogOut } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 
 interface AdminHeaderProps {
   onToggleSidebar: () => void;
-  title?: string;
-  subtitle?: string;
 }
 
-export function AdminHeader({
-  onToggleSidebar,
-  title = 'Users',
-  subtitle = 'Manage portal access for distributors and staff',
-}: AdminHeaderProps) {
+export function AdminHeader({ onToggleSidebar }: AdminHeaderProps) {
   const router = useRouter();
+  const pathname = usePathname();
 
   const handleLogout = async () => {
     try {
@@ -26,6 +21,21 @@ export function AdminHeader({
       window.location.href = '/';
     }
   };
+
+  // Determine title and subtitle based on current route
+  let title = 'Dashboard';
+  let subtitle = 'System overview';
+
+  if (pathname.startsWith('/admin/users')) {
+    title = 'Users';
+    subtitle = 'Manage portal access for distributors and staff';
+  } else if (pathname.startsWith('/admin/locations')) {
+    title = 'Delivered Locations';
+    subtitle = 'Distributor delivery activity';
+  } else if (pathname.startsWith('/admin/dashboard')) {
+    title = 'Dashboard';
+    subtitle = 'System overview';
+  }
 
   return (
     <header className="h-14 bg-white border-b border-[#E5E5E5] sticky top-0 z-30 flex items-center justify-between px-4 sm:px-6">

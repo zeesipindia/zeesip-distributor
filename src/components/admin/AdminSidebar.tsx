@@ -3,24 +3,13 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Users, Package, ShoppingBag, Truck, BarChart3, Settings, X } from 'lucide-react';
+import { LayoutDashboard, Users, MapPin, X } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
 
-interface NavItem {
-  name: string;
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-  isReady?: boolean;
-}
-
-export const ADMIN_MODULES: NavItem[] = [
-  { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard, isReady: true },
-  { name: 'Users', href: '/admin/users', icon: Users, isReady: true },
-  { name: 'Products', href: '/admin/products', icon: Package, isReady: false },
-  { name: 'Orders', href: '/admin/orders', icon: ShoppingBag, isReady: false },
-  { name: 'Shipments', href: '/admin/shipments', icon: Truck, isReady: false },
-  { name: 'Reports', href: '/admin/reports', icon: BarChart3, isReady: false },
-  { name: 'Settings', href: '/admin/settings', icon: Settings, isReady: false },
+export const ADMIN_MODULES = [
+  { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
+  { name: 'Users', href: '/admin/users', icon: Users },
+  { name: 'Delivered Locations', href: '/admin/locations', icon: MapPin },
 ];
 
 interface AdminSidebarProps {
@@ -66,25 +55,10 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
             </div>
             <nav className="space-y-0.5">
               {ADMIN_MODULES.map((item) => {
-                const isActive = pathname === item.href || (item.href !== '/admin/dashboard' && pathname.startsWith(item.href + '/'));
+                const isActive =
+                  pathname === item.href ||
+                  (item.href !== '/admin/dashboard' && pathname.startsWith(item.href + '/'));
                 const Icon = item.icon;
-
-                if (!item.isReady) {
-                  return (
-                    <div
-                      key={item.name}
-                      className="flex items-center justify-between px-2.5 py-2 rounded-[6px] text-xs font-normal text-[#A3A3A3] select-none cursor-not-allowed"
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <Icon className="w-4 h-4 text-[#A3A3A3]" />
-                        <span>{item.name}</span>
-                      </div>
-                      <span className="text-[10px] text-[#A3A3A3]">
-                        Soon
-                      </span>
-                    </div>
-                  );
-                }
 
                 return (
                   <Link

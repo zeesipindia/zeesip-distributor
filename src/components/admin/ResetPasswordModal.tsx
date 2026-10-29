@@ -9,9 +9,10 @@ interface ResetPasswordModalProps {
   isOpen: boolean;
   user: PortalUserPublic | null;
   onClose: () => void;
+  onUserUpdated?: (updated: PortalUserPublic) => void;
 }
 
-export function ResetPasswordModal({ isOpen, user, onClose }: ResetPasswordModalProps) {
+export function ResetPasswordModal({ isOpen, user, onClose, onUserUpdated }: ResetPasswordModalProps) {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,6 +41,13 @@ export function ResetPasswordModal({ isOpen, user, onClose }: ResetPasswordModal
         setError(data.error || 'Failed to update password');
         setIsLoading(false);
         return;
+      }
+
+      if (onUserUpdated && data.user) {
+        onUserUpdated({
+          ...data.user,
+          password: password.trim(),
+        });
       }
 
       setIsLoading(false);

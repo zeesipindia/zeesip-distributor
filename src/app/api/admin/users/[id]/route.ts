@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { updateUser, deleteUser, findUserById, findUserByPasswordLookup } from '@/lib/db';
-import { verifySessionToken, computePasswordLookup, constantTimeCompare, SESSION_COOKIE_NAME } from '@/lib/auth';
-import { SessionPayload } from '@/lib/types';
+import {
+  verifySessionToken,
+  computePasswordLookup,
+  constantTimeCompare,
+  encryptPassword,
+  SESSION_COOKIE_NAME,
+  SessionPayload,
+} from '@/lib/auth';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -50,6 +56,7 @@ export async function PATCH(
       is_active?: boolean;
       password_hash?: string;
       password_lookup?: string;
+      password_enc?: string;
     } = {};
 
     // Prevent an admin from deactivating their own account
@@ -108,13 +115,21 @@ export async function PATCH(
       const salt = await bcrypt.genSalt(10);
       updates.password_hash = await bcrypt.hash(trimmed, salt);
       updates.password_lookup = lookup;
+      updates.password_enc = encryptPassword(trimmed);
     }
 
     const updated = await updateUser(id, updates);
-    return NextResponse.json({ success: true, user: updated });
+    return NextResponse.json({
+      success: true,
+      user: {
+        ...updated,
+        password: body.password ? String(body.password).trim() : undefined,
+      },
+    });
   } catch (error) {
-    console.error('Error updating user:', error);
-    return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
+    const errMsg = (error as Error).message || 'Failed to update user';
+    console.error('[ADMIN_UPDATE_USER_ERROR]', { message: errMsg });
+    return NextResponse.json({ error: errMsg }, { status: 500 });
   }
 }
 
@@ -151,7 +166,8 @@ export async function DELETE(
     await deleteUser(id);
     return NextResponse.json({ success: true, message: 'User deleted successfully' });
   } catch (error) {
-    console.error('Error deleting user:', error);
-    return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 });
+    const errMsg = (error as Error).message || 'Failed to delete user';
+    console.error('[ADMIN_DELETE_USER_ERROR]', { message: errMsg });
+    return NextResponse.json({ error: errMsg }, { status: 500 });
   }
 }
